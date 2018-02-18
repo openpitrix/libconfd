@@ -1,6 +1,6 @@
 # libconfd
 
-[![Build Status](https://travis-ci.org/libconfd/libconfd.svg)](https://travis-ci.org/chai2010/libconfd)
+[![Build Status](https://travis-ci.org/chai2010/libconfd.svg)](https://travis-ci.org/chai2010/libconfd)
 [![Docker Build Status](https://img.shields.io/docker/build/chai2010/libconfd.svg)](https://hub.docker.com/r/libconfd/libconfd/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/chai2010/libconfd)](https://goreportcard.com/report/github.com/chai2010/libconfd)
 [![GoDoc](https://godoc.org/github.com/chai2010/libconfd?status.svg)](https://godoc.org/github.com/chai2010/libconfd)
