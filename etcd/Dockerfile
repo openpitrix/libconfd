@@ -20,10 +20,13 @@ COPY --from=builder /etcd-download/etcd-v3.2.12-linux-amd64/etcdctl /usr/local/b
 
 EXPOSE 2379 2380
 
+RUN mkdir -p /etcd
+WORKDIR /etcd
+
 ENTRYPOINT []
 
 CMD [ "/usr/local/bin/etcd", \
-    "--data-dir=/etcd-data", \
+    "--data-dir=/etcd/data", \
     "--name=node1", \
     \
     "--initial-advertise-peer-urls=http://0.0.0.0:2380", \
