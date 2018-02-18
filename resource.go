@@ -56,7 +56,7 @@ type TemplateResource struct {
 	lastIndex     uint64
 	keepStageFile bool
 	noop          bool
-	store         KVStore
+	store         *KVStore
 	storeClient   StoreClient
 	syncOnly      bool
 	PGPPrivateKey []byte

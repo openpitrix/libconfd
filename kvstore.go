@@ -40,8 +40,8 @@ type KVStore struct {
 }
 
 // New creates and initializes a new KVStore.
-func NewKVStore() KVStore {
-	s := KVStore{m: make(map[string]KVPair)}
+func NewKVStore() *KVStore {
+	s := &KVStore{m: make(map[string]KVPair)}
 	s.FuncMap = map[string]interface{}{
 		"exists": s.Exists,
 		"ls":     s.List,
@@ -55,14 +55,14 @@ func NewKVStore() KVStore {
 }
 
 // Delete deletes the KVPair associated with key.
-func (s KVStore) Del(key string) {
+func (s *KVStore) Del(key string) {
 	s.Lock()
 	delete(s.m, key)
 	s.Unlock()
 }
 
 // Exists checks for the existence of key in the store.
-func (s KVStore) Exists(key string) bool {
+func (s *KVStore) Exists(key string) bool {
 	_, err := s.Get(key)
 	if err != nil {
 		return false
@@ -72,7 +72,7 @@ func (s KVStore) Exists(key string) bool {
 
 // Get gets the KVPair associated with key. If there is no KVPair
 // associated with key, Get returns KVPair{}, ErrNotExist.
-func (s KVStore) Get(key string) (KVPair, error) {
+func (s *KVStore) Get(key string) (KVPair, error) {
 	s.RLock()
 	kv, ok := s.m[key]
 	s.RUnlock()
@@ -84,7 +84,7 @@ func (s KVStore) Get(key string) (KVPair, error) {
 
 // GetValue gets the value associated with key. If there are no values
 // associated with key, GetValue returns "", ErrNotExist.
-func (s KVStore) GetValue(key string, v ...string) (string, error) {
+func (s *KVStore) GetValue(key string, v ...string) (string, error) {
 	kv, err := s.Get(key)
 	if err != nil {
 		if len(v) > 0 {
@@ -98,7 +98,7 @@ func (s KVStore) GetValue(key string, v ...string) (string, error) {
 
 // GetAll returns a KVPair for all nodes with keys matching pattern.
 // The syntax of patterns is the same as in path.Match.
-func (s KVStore) GetAll(pattern string) ([]KVPair, error) {
+func (s *KVStore) GetAll(pattern string) ([]KVPair, error) {
 	ks := make([]KVPair, 0)
 	s.RLock()
 	defer s.RUnlock()
@@ -120,7 +120,7 @@ func (s KVStore) GetAll(pattern string) ([]KVPair, error) {
 	return ks, nil
 }
 
-func (s KVStore) GetAllValues(pattern string) ([]string, error) {
+func (s *KVStore) GetAllValues(pattern string) ([]string, error) {
 	vs := make([]string, 0)
 	ks, err := s.GetAll(pattern)
 	if err != nil {
@@ -136,7 +136,7 @@ func (s KVStore) GetAllValues(pattern string) ([]string, error) {
 	return vs, nil
 }
 
-func (s KVStore) List(filePath string) []string {
+func (s *KVStore) List(filePath string) []string {
 	vs := make([]string, 0)
 	m := make(map[string]bool)
 	s.RLock()
@@ -159,7 +159,7 @@ func (s KVStore) List(filePath string) []string {
 	return vs
 }
 
-func (s KVStore) ListDir(filePath string) []string {
+func (s *KVStore) ListDir(filePath string) []string {
 	vs := make([]string, 0)
 	m := make(map[string]bool)
 	s.RLock()
@@ -181,13 +181,13 @@ func (s KVStore) ListDir(filePath string) []string {
 }
 
 // Set sets the KVPair entry associated with key to value.
-func (s KVStore) Set(key string, value string) {
+func (s *KVStore) Set(key string, value string) {
 	s.Lock()
 	s.m[key] = KVPair{key, value}
 	s.Unlock()
 }
 
-func (s KVStore) Purge() {
+func (s *KVStore) Purge() {
 	s.Lock()
 	for k := range s.m {
 		delete(s.m, k)
@@ -195,15 +195,15 @@ func (s KVStore) Purge() {
 	s.Unlock()
 }
 
-func (KVStore) stripKey(key, prefix string) string {
+func (*KVStore) stripKey(key, prefix string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(key, prefix), "/")
 }
 
-func (KVStore) pathToTerms(filePath string) []string {
+func (*KVStore) pathToTerms(filePath string) []string {
 	return strings.Split(path.Clean(filePath), "/")
 }
 
-func (KVStore) samePrefixTerms(prefix, test []string) bool {
+func (*KVStore) samePrefixTerms(prefix, test []string) bool {
 	if len(test) < len(prefix) {
 		return false
 	}
