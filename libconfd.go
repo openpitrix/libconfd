@@ -37,7 +37,8 @@ func ServeConfd(cfg Config, client StoreClient, opt Options) {
 	logger.Info("Starting confd")
 
 	if opt.Onetime {
-		if err := Process(cfg, client); err != nil {
+		var processor = NewOnetimeProcessor(cfg)
+		if err := processor.Process(client); err != nil {
 			logger.Fatal(err)
 		}
 		os.Exit(0)
@@ -50,9 +51,9 @@ func ServeConfd(cfg Config, client StoreClient, opt Options) {
 	var processor Processor
 	switch {
 	case opt.Watch:
-		processor = WatchProcessor(cfg, stopChan, doneChan, errChan)
+		processor = NewWatchProcessor(cfg, stopChan, doneChan, errChan)
 	default:
-		processor = IntervalProcessor(cfg, stopChan, doneChan, errChan, opt.Interval)
+		processor = NewIntervalProcessor(cfg, stopChan, doneChan, errChan, opt.Interval)
 	}
 
 	go processor.Process(client)

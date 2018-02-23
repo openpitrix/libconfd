@@ -92,7 +92,7 @@ func TestProcessTemplateResources(t *testing.T) {
 		TemplateDir: filepath.Join(tempConfDir, "templates"),
 	}
 	// Process the test template resource.
-	err = Process(c, storeClient)
+	err = NewOnetimeProcessor(c).Process(storeClient)
 	if err != nil {
 		t.Error(err)
 	}

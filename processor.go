@@ -10,11 +10,21 @@ import (
 )
 
 type Processor interface {
-	Process(client StoreClient)
+	Process(client StoreClient) error
 }
 
-func Process(config Config, client StoreClient) error {
-	ts, err := MakeTemplateResourceList(config, client)
+func NewOnetimeProcessor(cfg Config) Processor {
+	return &onetimeProcessor{
+		config: cfg,
+	}
+}
+
+type onetimeProcessor struct {
+	config Config
+}
+
+func (p *onetimeProcessor) Process(client StoreClient) error {
+	ts, err := MakeTemplateResourceList(p.config, client)
 	if err != nil {
 		return err
 	}
@@ -41,17 +51,17 @@ type intervalProcessor struct {
 	interval int
 }
 
-func IntervalProcessor(config Config, stopChan, doneChan chan bool, errChan chan error, interval int) Processor {
+func NewIntervalProcessor(config Config, stopChan, doneChan chan bool, errChan chan error, interval int) Processor {
 	return &intervalProcessor{config, stopChan, doneChan, errChan, interval}
 }
 
-func (p *intervalProcessor) Process(client StoreClient) {
+func (p *intervalProcessor) Process(client StoreClient) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeTemplateResourceList(p.config, client)
 		if err != nil {
-			logger.Fatal(err)
-			break
+			logger.Warning(err)
+			return err
 		}
 
 		for _, t := range ts {
@@ -67,6 +77,8 @@ func (p *intervalProcessor) Process(client StoreClient) {
 			continue
 		}
 	}
+
+	return nil
 }
 
 type watchProcessor struct {
@@ -77,7 +89,7 @@ type watchProcessor struct {
 	wg       sync.WaitGroup
 }
 
-func WatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan error) Processor {
+func NewWatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan error) Processor {
 	return &watchProcessor{
 		config:   config,
 		stopChan: stopChan,
@@ -86,12 +98,12 @@ func WatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan er
 	}
 }
 
-func (p *watchProcessor) Process(client StoreClient) {
+func (p *watchProcessor) Process(client StoreClient) error {
 	defer close(p.doneChan)
 	ts, err := MakeTemplateResourceList(p.config, client)
 	if err != nil {
-		logger.Fatal(err)
-		return
+		logger.Warning(err)
+		return err
 	}
 	for _, t := range ts {
 		t := t
@@ -99,6 +111,7 @@ func (p *watchProcessor) Process(client StoreClient) {
 		go p.monitorPrefix(t)
 	}
 	p.wg.Wait()
+	return nil
 }
 
 func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
