@@ -45,7 +45,7 @@ func TestProcessTemplateResources(t *testing.T) {
 	// Setup temporary conf, config, and template directories.
 	tempConfDir, err := createTempDirs()
 	if err != nil {
-		t.Errorf("Failed to create temp dirs: %s", err.Error())
+		t.Errorf("Failed to create temp dirs: %s", err)
 	}
 	defer os.RemoveAll(tempConfDir)
 
@@ -53,13 +53,13 @@ func TestProcessTemplateResources(t *testing.T) {
 	srcTemplateFile := filepath.Join(tempConfDir, "templates", "foo.tmpl")
 	err = ioutil.WriteFile(srcTemplateFile, []byte(`foo = {{getv "/foo"}}`), 0644)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 
 	// Create the dest.
 	destFile, err := ioutil.TempFile("", "")
 	if err != nil {
-		t.Errorf("Failed to create destFile: %s", err.Error())
+		t.Errorf("Failed to create destFile: %v", err)
 	}
 	defer os.Remove(destFile.Name())
 
@@ -67,24 +67,24 @@ func TestProcessTemplateResources(t *testing.T) {
 	templateResourcePath := filepath.Join(tempConfDir, "conf.d", "foo.toml")
 	templateResourceFile, err := os.Create(templateResourcePath)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	tmpl, err := template.New("templateResourceConfig").Parse(templateResourceConfigTmpl)
 	if err != nil {
-		t.Errorf("Unable to parse template resource template: %s", err.Error())
+		t.Errorf("Unable to parse template resource template: %v", err)
 	}
 	data := make(map[string]string)
 	data["src"] = "foo.tmpl"
 	data["dest"] = destFile.Name()
 	err = tmpl.Execute(templateResourceFile, data)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 
 	os.Setenv("FOO", "bar")
 	storeClient, err := NewEnvClient()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	c := Config{
 		ConfDir:     tempConfDir,
@@ -94,13 +94,13 @@ func TestProcessTemplateResources(t *testing.T) {
 	// Process the test template resource.
 	err = Process(c, storeClient)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 	// Verify the results.
 	expected := "foo = bar"
 	results, err := ioutil.ReadFile(destFile.Name())
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 	if string(results) != expected {
 		t.Errorf("Expected contents of dest == '%s', got %s", expected, string(results))
@@ -111,24 +111,24 @@ func TestSameConfigTrue(t *testing.T) {
 	src, err := ioutil.TempFile("", "src")
 	defer os.Remove(src.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	_, err = src.WriteString("foo")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	dest, err := ioutil.TempFile("", "dest")
 	defer os.Remove(dest.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	_, err = dest.WriteString("foo")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	status, err := sameConfig(src.Name(), dest.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	if status != true {
 		t.Errorf("Expected sameConfig(src, dest) to be %v, got %v", true, status)
@@ -139,24 +139,24 @@ func TestSameConfigFalse(t *testing.T) {
 	src, err := ioutil.TempFile("", "src")
 	defer os.Remove(src.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	_, err = src.WriteString("src")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	dest, err := ioutil.TempFile("", "dest")
 	defer os.Remove(dest.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	_, err = dest.WriteString("dest")
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	status, err := sameConfig(src.Name(), dest.Name())
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%v", err)
 	}
 	if status != false {
 		t.Errorf("Expected sameConfig(src, dest) to be %v, got %v", false, status)

@@ -720,18 +720,18 @@ func ExecuteTestTemplate(tt templateTest, t *testing.T) {
 
 	tr, err := templateResource()
 	if err != nil {
-		t.Errorf(tt.desc + ": failed to create TemplateResource: " + err.Error())
+		t.Errorf("%s: failed to create TemplateResource: %v", tt.desc, err)
 	}
 
 	tt.updateStore(tr)
 
 	if err := tr.createStageFile(); err != nil {
-		t.Errorf(tt.desc + ": failed createStageFile: " + err.Error())
+		t.Errorf("%s: failed createStageFile: %v", tt.desc, err)
 	}
 
 	actual, err := ioutil.ReadFile(tr.StageFile.Name())
 	if err != nil {
-		t.Errorf(tt.desc + ": failed to read StageFile: " + err.Error())
+		t.Errorf("%s: failed to read StageFile: %v", tt.desc, err)
 	}
 	if string(actual) != tt.expected {
 		t.Errorf(fmt.Sprintf("%v: invalid StageFile. Expected %v, actual %v", tt.desc, tt.expected, string(actual)))
@@ -743,21 +743,21 @@ func ExecuteTestTemplate(tt templateTest, t *testing.T) {
 func setupDirectoriesAndFiles(tt templateTest, t *testing.T) {
 	// create confd directory and toml file
 	if err := os.MkdirAll("./test/confd", os.ModePerm); err != nil {
-		t.Errorf(tt.desc + ": failed to created confd directory: " + err.Error())
+		t.Errorf("%s: failed to created confd directory: %v", tt.desc, err)
 	}
 	if err := ioutil.WriteFile(tomlFilePath, []byte(tt.toml), os.ModePerm); err != nil {
-		t.Errorf(tt.desc + ": failed to write toml file: " + err.Error())
+		t.Errorf("%s: failed to write toml file: %v", tt.desc, err)
 	}
 	// create templates directory and tmpl file
 	if err := os.MkdirAll("./test/templates", os.ModePerm); err != nil {
-		t.Errorf(tt.desc + ": failed to create template directory: " + err.Error())
+		t.Errorf("%s: failed to create template directory: %v", tt.desc, err)
 	}
 	if err := ioutil.WriteFile(tmplFilePath, []byte(tt.tmpl), os.ModePerm); err != nil {
-		t.Errorf(tt.desc + ": failed to write toml file: " + err.Error())
+		t.Errorf("%s: failed to write toml file: %v", tt.desc, err)
 	}
 	// create tmp directory for output
 	if err := os.MkdirAll("./test/tmp", os.ModePerm); err != nil {
-		t.Errorf(tt.desc + ": failed to create tmp directory: " + err.Error())
+		t.Errorf("%s: failed to create tmp directory: %v", tt.desc, err)
 	}
 }
 

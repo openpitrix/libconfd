@@ -5,26 +5,11 @@
 package libconfd
 
 import (
-	"errors"
 	"path"
 	"sort"
 	"strings"
 	"sync"
 )
-
-var (
-	ErrNotExist = errors.New("libconfd: key does not exist")
-	ErrNoMatch  = errors.New("libconfd: no keys match")
-)
-
-type KeyError struct {
-	Key string
-	Err error
-}
-
-func (e *KeyError) Error() string {
-	return e.Err.Error() + ": " + e.Key
-}
 
 type KVPair struct {
 	Key   string

@@ -19,11 +19,11 @@ func TestSecconfEncoding(t *testing.T) {
 	for _, tt := range tSecconf_encodingTests {
 		encoded, err := secconfEncode([]byte(tt.in), bytes.NewBufferString(tSecconf_pubring))
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Errorf("%v", err)
 		}
 		decoded, err := secconfDecode(encoded, bytes.NewBufferString(tSecconf_secring))
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Errorf("%v", err)
 		}
 		if tt.out != string(decoded) {
 			t.Errorf("want %s, got %s", tt.out, decoded)

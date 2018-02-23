@@ -62,7 +62,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	}
 	_, err := toml.DecodeFile(path, &tc)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot process template resource %s - %s", path, err.Error())
+		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
 	}
 
 	tr := tc.TemplateResource
@@ -237,7 +237,7 @@ func (t *TemplateResource) sync() error {
 	}
 	ok, err := sameConfig(staged, t.Dest)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Error(err)
 	}
 	if t.noop {
 		logger.Warning("Noop mode enabled. " + t.Dest + " will not be modified")
@@ -247,7 +247,7 @@ func (t *TemplateResource) sync() error {
 		logger.Info("Target config " + t.Dest + " out of sync")
 		if !t.syncOnly && t.CheckCmd != "" {
 			if err := t.check(); err != nil {
-				return errors.New("Config check failed: " + err.Error())
+				return fmt.Errorf("Config check failed: %v", err)
 			}
 		}
 		if logger.V(1) {
@@ -255,24 +255,24 @@ func (t *TemplateResource) sync() error {
 		}
 		err := os.Rename(staged, t.Dest)
 		if err != nil {
-			if strings.Contains(err.Error(), "device or resource busy") {
-				if logger.V(1) {
-					logger.Info("Rename failed - target is likely a mount. Trying to write instead")
-				}
-				// try to open the file and write to it
-				var contents []byte
-				var rerr error
-				contents, rerr = ioutil.ReadFile(staged)
-				if rerr != nil {
-					return rerr
-				}
-				err := ioutil.WriteFile(t.Dest, contents, t.FileMode)
-				// make sure owner and group match the temp file, in case the file was created with WriteFile
-				os.Chown(t.Dest, t.Uid, t.Gid)
-				if err != nil {
-					return err
-				}
-			} else {
+			if notDeviceOrResourceBusyError(err) {
+				return err
+			}
+
+			if logger.V(1) {
+				logger.Info("Rename failed - target is likely a mount. Trying to write instead")
+			}
+			// try to open the file and write to it
+			var contents []byte
+			var rerr error
+			contents, rerr = ioutil.ReadFile(staged)
+			if rerr != nil {
+				return rerr
+			}
+			err := ioutil.WriteFile(t.Dest, contents, t.FileMode)
+			// make sure owner and group match the temp file, in case the file was created with WriteFile
+			os.Chown(t.Dest, t.Uid, t.Gid)
+			if err != nil {
 				return err
 			}
 		}

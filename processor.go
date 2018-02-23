@@ -19,18 +19,19 @@ func Process(config Config, client StoreClient) error {
 	if err != nil {
 		return err
 	}
-	return process(ts)
-}
 
-func process(ts []*TemplateResource) error {
-	var lastErr error
+	var allErrors []error
 	for _, t := range ts {
 		if err := t.process(); err != nil {
-			logger.Error(err.Error())
-			lastErr = err
+			allErrors = append(allErrors, err)
+			logger.Error(err)
 		}
 	}
-	return lastErr
+	if len(allErrors) > 0 {
+		return allErrors[0]
+	}
+
+	return nil
 }
 
 type intervalProcessor struct {
@@ -50,10 +51,16 @@ func (p *intervalProcessor) Process(client StoreClient) {
 	for {
 		ts, err := getTemplateResources(p.config, client)
 		if err != nil {
-			logger.Fatal(err.Error())
+			logger.Fatal(err)
 			break
 		}
-		process(ts)
+
+		for _, t := range ts {
+			if err := t.process(); err != nil {
+				logger.Error(err)
+			}
+		}
+
 		select {
 		case <-p.stopChan:
 			break
@@ -84,7 +91,7 @@ func (p *watchProcessor) Process(client StoreClient) {
 	defer close(p.doneChan)
 	ts, err := getTemplateResources(p.config, client)
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal(err)
 		return
 	}
 	for _, t := range ts {

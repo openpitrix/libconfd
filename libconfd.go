@@ -38,7 +38,7 @@ func ServeConfd(cfg Config, client StoreClient, opt Options) {
 
 	if opt.Onetime {
 		if err := Process(cfg, client); err != nil {
-			logger.Fatal(err.Error())
+			logger.Fatal(err)
 		}
 		os.Exit(0)
 	}
@@ -62,7 +62,7 @@ func ServeConfd(cfg Config, client StoreClient, opt Options) {
 	for {
 		select {
 		case err := <-errChan:
-			logger.Error(err.Error())
+			logger.Error(err)
 		case s := <-signalChan:
 			logger.Info(fmt.Sprintf("Captured %v. Exiting...", s))
 			close(doneChan)
