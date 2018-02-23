@@ -27,7 +27,7 @@ func (e *KeyError) Error() string {
 
 func notDeviceOrResourceBusyError(err error) bool {
 	if err != nil && strings.Contains(err.Error(), "device or resource busy") {
-		return true // OK
+		return false
 	}
-	return false
+	return true // OK
 }
