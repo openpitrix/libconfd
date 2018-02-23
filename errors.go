@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrEmptySrc = errors.New("libconfd: empty src template")
 	ErrNotExist = errors.New("libconfd: key does not exist")
 	ErrNoMatch  = errors.New("libconfd: no keys match")
 )

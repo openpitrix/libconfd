@@ -49,7 +49,38 @@ type TemplateResource struct {
 	PGPPrivateKey []byte
 }
 
-var ErrEmptySrc = errors.New("empty src template")
+func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResource, error) {
+	var lastError error
+	templates := make([]*TemplateResource, 0)
+	if logger.V(1) {
+		logger.Info("Loading template resources from confdir " + config.ConfDir)
+	}
+	if !isFileExist(config.ConfDir) {
+		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
+		return nil, nil
+	}
+	paths, err := recursiveFindFiles(config.ConfigDir, "*toml")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(paths) < 1 {
+		logger.Warning("Found no templates")
+	}
+
+	for _, p := range paths {
+		if logger.V(1) {
+			logger.Info(fmt.Sprintf("Found template: %s", p))
+		}
+		t, err := NewTemplateResource(p, config, client)
+		if err != nil {
+			lastError = err
+			continue
+		}
+		templates = append(templates, t)
+	}
+	return templates, lastError
+}
 
 // NewTemplateResource creates a TemplateResource.
 func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResource, error) {

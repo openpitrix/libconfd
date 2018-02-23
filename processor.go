@@ -5,7 +5,6 @@
 package libconfd
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -15,7 +14,7 @@ type Processor interface {
 }
 
 func Process(config Config, client StoreClient) error {
-	ts, err := getTemplateResources(config, client)
+	ts, err := MakeTemplateResourceList(config, client)
 	if err != nil {
 		return err
 	}
@@ -49,7 +48,7 @@ func IntervalProcessor(config Config, stopChan, doneChan chan bool, errChan chan
 func (p *intervalProcessor) Process(client StoreClient) {
 	defer close(p.doneChan)
 	for {
-		ts, err := getTemplateResources(p.config, client)
+		ts, err := MakeTemplateResourceList(p.config, client)
 		if err != nil {
 			logger.Fatal(err)
 			break
@@ -89,7 +88,7 @@ func WatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan er
 
 func (p *watchProcessor) Process(client StoreClient) {
 	defer close(p.doneChan)
-	ts, err := getTemplateResources(p.config, client)
+	ts, err := MakeTemplateResourceList(p.config, client)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -118,37 +117,4 @@ func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
 			p.errChan <- err
 		}
 	}
-}
-
-func getTemplateResources(config Config, client StoreClient) ([]*TemplateResource, error) {
-	var lastError error
-	templates := make([]*TemplateResource, 0)
-	if logger.V(1) {
-		logger.Info("Loading template resources from confdir " + config.ConfDir)
-	}
-	if !isFileExist(config.ConfDir) {
-		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
-		return nil, nil
-	}
-	paths, err := recursiveFindFiles(config.ConfigDir, "*toml")
-	if err != nil {
-		return nil, err
-	}
-
-	if len(paths) < 1 {
-		logger.Warning("Found no templates")
-	}
-
-	for _, p := range paths {
-		if logger.V(1) {
-			logger.Info(fmt.Sprintf("Found template: %s", p))
-		}
-		t, err := NewTemplateResource(p, config, client)
-		if err != nil {
-			lastError = err
-			continue
-		}
-		templates = append(templates, t)
-	}
-	return templates, lastError
 }
