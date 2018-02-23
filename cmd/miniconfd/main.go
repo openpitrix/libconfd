@@ -5,9 +5,22 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+
 	_ "github.com/chai2010/libconfd"
 )
 
 func main() {
-	println("TODO")
+	flag.Parse()
+
+	if err := Main(); err != nil {
+		logger.Fatal(err)
+	}
+
+	fmt.Println("Done")
+}
+
+func Main() error {
+	return fmt.Errorf("TODO")
 }

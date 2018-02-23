@@ -1,0 +1,9 @@
+/cmd/miniconfd/miniconfd
+/miniconfd
+
+*.so
+*.a
+
+*.exe
+*.dll
+*.lib
