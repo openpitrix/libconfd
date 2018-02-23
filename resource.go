@@ -19,7 +19,6 @@ import (
 	"text/template"
 
 	"github.com/BurntSushi/toml"
-	"github.com/golang/glog"
 )
 
 type Config struct {
@@ -74,7 +73,9 @@ func NewTemplateResource(path string, config Config) (*TemplateResource, error) 
 	// unset from configuration.
 	tc := &TemplateResourceConfig{TemplateResource{Uid: -1, Gid: -1}}
 
-	glog.V(1).Info("Loading template resource from " + path)
+	if logger.V(1) {
+		logger.Info("Loading template resource from " + path)
+	}
 	_, err := toml.DecodeFile(path, &tc)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot process template resource %s - %s", path, err.Error())
@@ -174,15 +175,17 @@ func addCryptFuncs(tr *TemplateResource) {
 // setVars sets the Vars for template resource.
 func (t *TemplateResource) setVars() error {
 	var err error
-	glog.V(1).Info("Retrieving keys from store")
-	glog.V(1).Info("Key prefix set to " + t.Prefix)
-
+	if logger.V(1) {
+		logger.Info("Retrieving keys from store")
+		logger.Info("Key prefix set to " + t.Prefix)
+	}
 	result, err := t.storeClient.GetValues(appendPrefix(t.Prefix, t.Keys))
 	if err != nil {
 		return err
 	}
-	glog.V(1).Info("Got the following map from store: %v", result)
-
+	if logger.V(1) {
+		logger.Info("Got the following map from store: %v", result)
+	}
 	t.store.Purge()
 
 	for k, v := range result {
@@ -196,14 +199,16 @@ func (t *TemplateResource) setVars() error {
 // StageFile for the template resource.
 // It returns an error if any.
 func (t *TemplateResource) createStageFile() error {
-	glog.V(1).Info("Using source template " + t.Src)
-
+	if logger.V(1) {
+		logger.Info("Using source template " + t.Src)
+	}
 	if !isFileExist(t.Src) {
 		return errors.New("Missing template: " + t.Src)
 	}
 
-	glog.V(1).Info("Compiling source template " + t.Src)
-
+	if logger.V(1) {
+		logger.Info("Compiling source template " + t.Src)
+	}
 	tmpl, err := template.New(filepath.Base(t.Src)).Funcs(t.funcMap).ParseFiles(t.Src)
 	if err != nil {
 		return fmt.Errorf("Unable to process template %s, %s", t.Src, err)
@@ -238,32 +243,38 @@ func (t *TemplateResource) createStageFile() error {
 func (t *TemplateResource) sync() error {
 	staged := t.StageFile.Name()
 	if t.keepStageFile {
-		glog.Info("Keeping staged file: " + staged)
+		logger.Info("Keeping staged file: " + staged)
 	} else {
 		defer os.Remove(staged)
 	}
 
-	glog.V(1).Info("Comparing candidate config to " + t.Dest)
+	if logger.V(1) {
+		logger.Info("Comparing candidate config to " + t.Dest)
+	}
 	ok, err := sameConfig(staged, t.Dest)
 	if err != nil {
-		glog.Error(err.Error())
+		logger.Error(err.Error())
 	}
 	if t.noop {
-		glog.Warning("Noop mode enabled. " + t.Dest + " will not be modified")
+		logger.Warning("Noop mode enabled. " + t.Dest + " will not be modified")
 		return nil
 	}
 	if !ok {
-		glog.Info("Target config " + t.Dest + " out of sync")
+		logger.Info("Target config " + t.Dest + " out of sync")
 		if !t.syncOnly && t.CheckCmd != "" {
 			if err := t.check(); err != nil {
 				return errors.New("Config check failed: " + err.Error())
 			}
 		}
-		glog.V(1).Info("Overwriting target config " + t.Dest)
+		if logger.V(1) {
+			logger.Info("Overwriting target config " + t.Dest)
+		}
 		err := os.Rename(staged, t.Dest)
 		if err != nil {
 			if strings.Contains(err.Error(), "device or resource busy") {
-				glog.V(1).Info("Rename failed - target is likely a mount. Trying to write instead")
+				if logger.V(1) {
+					logger.Info("Rename failed - target is likely a mount. Trying to write instead")
+				}
 				// try to open the file and write to it
 				var contents []byte
 				var rerr error
@@ -286,9 +297,11 @@ func (t *TemplateResource) sync() error {
 				return err
 			}
 		}
-		glog.Info("Target config " + t.Dest + " has been updated")
+		logger.Info("Target config " + t.Dest + " has been updated")
 	} else {
-		glog.V(1).Info("Target config " + t.Dest + " in sync")
+		if logger.V(1) {
+			logger.Info("Target config " + t.Dest + " in sync")
+		}
 	}
 	return nil
 }
@@ -324,7 +337,9 @@ func (t *TemplateResource) reload() error {
 // It returns nil if the given cmd returns 0.
 // The command can be run on unix and windows.
 func runCommand(cmd string) error {
-	glog.V(1).Info("Running " + cmd)
+	if logger.V(1) {
+		logger.Info("Running " + cmd)
+	}
 	var c *exec.Cmd
 	if runtime.GOOS == "windows" {
 		c = exec.Command("cmd", "/C", cmd)
@@ -334,10 +349,12 @@ func runCommand(cmd string) error {
 
 	output, err := c.CombinedOutput()
 	if err != nil {
-		glog.Error(fmt.Sprintf("%q", string(output)))
+		logger.Error(fmt.Sprintf("%q", string(output)))
 		return err
 	}
-	glog.V(1).Info(fmt.Sprintf("%q", string(output)))
+	if logger.V(1) {
+		logger.Info(fmt.Sprintf("%q", string(output)))
+	}
 	return nil
 }
 

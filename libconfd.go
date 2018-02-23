@@ -9,19 +9,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/golang/glog"
 )
 
 func StartConfd(storeClient StoreClient, onetime, watch bool, interval int) {
-	glog.Info("Starting confd")
+	logger.Info("Starting confd")
 
 	var templateConfig Config
 	templateConfig.StoreClient = storeClient
 
 	if onetime {
 		if err := Process(templateConfig); err != nil {
-			glog.Fatal(err.Error())
+			logger.Fatal(err.Error())
 		}
 		os.Exit(0)
 	}
@@ -45,9 +43,9 @@ func StartConfd(storeClient StoreClient, onetime, watch bool, interval int) {
 	for {
 		select {
 		case err := <-errChan:
-			glog.Error(err.Error())
+			logger.Error(err.Error())
 		case s := <-signalChan:
-			glog.Info(fmt.Sprintf("Captured %v. Exiting...", s))
+			logger.Info(fmt.Sprintf("Captured %v. Exiting...", s))
 			close(doneChan)
 		case <-doneChan:
 			os.Exit(0)

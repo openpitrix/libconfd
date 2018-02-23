@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/golang/glog"
 )
 
 // Client provides a shell for the env client
@@ -53,7 +51,9 @@ func (c *EnvClient) GetValues(keys []string) (map[string]string, error) {
 		}
 	}
 
-	glog.V(1).Info(fmt.Sprintf("Key Map: %#v", vars))
+	if logger.V(1) {
+		logger.Info(fmt.Sprintf("Key Map: %#v", vars))
+	}
 	return vars, nil
 }
 

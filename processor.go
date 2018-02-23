@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type Processor interface {
@@ -28,7 +26,7 @@ func process(ts []*TemplateResource) error {
 	var lastErr error
 	for _, t := range ts {
 		if err := t.process(); err != nil {
-			glog.Error(err.Error())
+			logger.Error(err.Error())
 			lastErr = err
 		}
 	}
@@ -52,7 +50,7 @@ func (p *intervalProcessor) Process() {
 	for {
 		ts, err := getTemplateResources(p.config)
 		if err != nil {
-			glog.Fatal(err.Error())
+			logger.Fatal(err.Error())
 			break
 		}
 		process(ts)
@@ -86,7 +84,7 @@ func (p *watchProcessor) Process() {
 	defer close(p.doneChan)
 	ts, err := getTemplateResources(p.config)
 	if err != nil {
-		glog.Fatal(err.Error())
+		logger.Fatal(err.Error())
 		return
 	}
 	for _, t := range ts {
@@ -118,9 +116,11 @@ func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
 func getTemplateResources(config Config) ([]*TemplateResource, error) {
 	var lastError error
 	templates := make([]*TemplateResource, 0)
-	glog.V(1).Info("Loading template resources from confdir " + config.ConfDir)
+	if logger.V(1) {
+		logger.Info("Loading template resources from confdir " + config.ConfDir)
+	}
 	if !isFileExist(config.ConfDir) {
-		glog.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
+		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
 		return nil, nil
 	}
 	paths, err := recursiveFindFiles(config.ConfigDir, "*toml")
@@ -129,11 +129,13 @@ func getTemplateResources(config Config) ([]*TemplateResource, error) {
 	}
 
 	if len(paths) < 1 {
-		glog.Warning("Found no templates")
+		logger.Warning("Found no templates")
 	}
 
 	for _, p := range paths {
-		glog.V(1).Info(fmt.Sprintf("Found template: %s", p))
+		if logger.V(1) {
+			logger.Info(fmt.Sprintf("Found template: %s", p))
+		}
 		t, err := NewTemplateResource(p, config)
 		if err != nil {
 			lastError = err

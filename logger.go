@@ -10,6 +10,12 @@ import (
 	"github.com/golang/glog"
 )
 
+var logger Logger = new(Glogger)
+
+func SetLogger(l Logger) {
+	logger = l
+}
+
 type Logger interface {
 	Info(args ...interface{})
 	Infoln(args ...interface{})
@@ -29,12 +35,6 @@ type Logger interface {
 }
 
 type Glogger struct{}
-
-var logger Logger = new(Glogger)
-
-func SetLogger(l Logger) {
-	logger = l
-}
 
 func (g *Glogger) Info(args ...interface{}) {
 	glog.InfoDepth(1, args...)

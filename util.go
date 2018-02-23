@@ -9,8 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-
-	"github.com/golang/glog"
 )
 
 // fileInfo describes a configuration file and is returned by fileStat.
@@ -54,16 +52,16 @@ func sameConfig(src, dest string) (bool, error) {
 		return false, err
 	}
 	if d.Uid != s.Uid {
-		glog.Info(fmt.Sprintf("%s has UID %d should be %d", dest, d.Uid, s.Uid))
+		logger.Info(fmt.Sprintf("%s has UID %d should be %d", dest, d.Uid, s.Uid))
 	}
 	if d.Gid != s.Gid {
-		glog.Info(fmt.Sprintf("%s has GID %d should be %d", dest, d.Gid, s.Gid))
+		logger.Info(fmt.Sprintf("%s has GID %d should be %d", dest, d.Gid, s.Gid))
 	}
 	if d.Mode != s.Mode {
-		glog.Info(fmt.Sprintf("%s has mode %s should be %s", dest, os.FileMode(d.Mode), os.FileMode(s.Mode)))
+		logger.Info(fmt.Sprintf("%s has mode %s should be %s", dest, os.FileMode(d.Mode), os.FileMode(s.Mode)))
 	}
 	if d.Md5 != s.Md5 {
-		glog.Info(fmt.Sprintf("%s has md5sum %s should be %s", dest, d.Md5, s.Md5))
+		logger.Info(fmt.Sprintf("%s has md5sum %s should be %s", dest, d.Md5, s.Md5))
 	}
 	if d.Uid != s.Uid || d.Gid != s.Gid || d.Mode != s.Mode || d.Md5 != s.Md5 {
 		return false, nil
