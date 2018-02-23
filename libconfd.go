@@ -61,11 +61,13 @@ type StoreClient interface {
 }
 
 type Confd struct {
-	//
+	cfg *Config
 }
 
 func NewConfd(cfg *Config) *Confd {
-	return &Confd{}
+	return &Confd{
+		cfg: cfg.Clone(),
+	}
 }
 
 func (p *Confd) IsRunning() bool {
