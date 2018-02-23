@@ -39,7 +39,7 @@ type TemplateResource struct {
 	Src           string
 	StageFile     *os.File
 	Uid           int
-	funcMap       map[string]interface{}
+	funcMap       FuncMap
 	lastIndex     uint64
 	keepStageFile bool
 	noop          bool
@@ -100,10 +100,10 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
 	tr.storeClient = client
-	tr.funcMap = newFuncMap()
+	tr.funcMap = NewFuncMap()
 	tr.store = NewKVStore()
 	tr.syncOnly = config.SyncOnly
-	addFuncs(tr.funcMap, tr.store.FuncMap)
+	tr.funcMap.AddFuncs(tr.store.FuncMap)
 
 	if config.Prefix != "" {
 		tr.Prefix = config.Prefix
@@ -135,7 +135,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 }
 
 func addCryptFuncs(tr *TemplateResource) {
-	addFuncs(tr.funcMap, map[string]interface{}{
+	tr.funcMap.AddFuncs(map[string]interface{}{
 		"cget": func(key string) (KVPair, error) {
 			kv, err := tr.funcMap["get"].(func(string) (KVPair, error))(key)
 			if err == nil {
@@ -224,7 +224,7 @@ func (t *TemplateResource) createStageFile() error {
 	if logger.V(1) {
 		logger.Info("Compiling source template " + t.Src)
 	}
-	tmpl, err := template.New(filepath.Base(t.Src)).Funcs(t.funcMap).ParseFiles(t.Src)
+	tmpl, err := template.New(filepath.Base(t.Src)).Funcs(template.FuncMap(t.funcMap)).ParseFiles(t.Src)
 	if err != nil {
 		return fmt.Errorf("Unable to process template %s, %s", t.Src, err)
 	}
