@@ -5,9 +5,11 @@
 package main
 
 import (
-	_ "github.com/chai2010/libconfd"
+	"github.com/chai2010/libconfd"
 )
 
-func main() {
-	println("TODO")
+var logger libconfd.Logger = new(libconfd.Glogger)
+
+func SetLogger(l libconfd.Logger) {
+	logger = l
 }

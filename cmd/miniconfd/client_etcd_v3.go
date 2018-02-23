@@ -134,6 +134,10 @@ func (c *EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64,
 
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
+			if logger.V(1) {
+				logger.Infof("Key updated %s", string(ev.Kv.Key))
+			}
+
 			// Only return if we have a key prefix we care about.
 			// This is not an exact match on the key so there is a chance
 			// we will still pickup on false positives. The net win here
@@ -145,5 +149,6 @@ func (c *EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64,
 			}
 		}
 	}
+
 	return 0, err
 }
