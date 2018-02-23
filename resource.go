@@ -21,18 +21,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type Config struct {
-	ConfDir       string
-	ConfigDir     string
-	KeepStageFile bool
-	Noop          bool
-	Prefix        string
-	StoreClient   StoreClient
-	SyncOnly      bool
-	TemplateDir   string
-	PGPPrivateKey []byte
-}
-
 // TemplateResourceConfig holds the parsed template resource.
 type TemplateResourceConfig struct {
 	TemplateResource TemplateResource `toml:"template"`
@@ -64,11 +52,7 @@ type TemplateResource struct {
 var ErrEmptySrc = errors.New("empty src template")
 
 // NewTemplateResource creates a TemplateResource.
-func NewTemplateResource(path string, config Config) (*TemplateResource, error) {
-	if config.StoreClient == nil {
-		return nil, errors.New("A valid StoreClient is required.")
-	}
-
+func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResource, error) {
 	// Set the default uid and gid so we can determine if it was
 	// unset from configuration.
 	tc := &TemplateResourceConfig{TemplateResource{Uid: -1, Gid: -1}}
@@ -84,7 +68,7 @@ func NewTemplateResource(path string, config Config) (*TemplateResource, error) 
 	tr := tc.TemplateResource
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
-	tr.storeClient = config.StoreClient
+	tr.storeClient = client
 	tr.funcMap = newFuncMap()
 	tr.store = NewKVStore()
 	tr.syncOnly = config.SyncOnly

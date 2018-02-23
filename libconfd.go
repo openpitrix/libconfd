@@ -15,10 +15,12 @@ func StartConfd(storeClient StoreClient, onetime, watch bool, interval int) {
 	logger.Info("Starting confd")
 
 	var templateConfig Config
-	templateConfig.StoreClient = storeClient
+	{
+		// make config
+	}
 
 	if onetime {
-		if err := Process(templateConfig); err != nil {
+		if err := Process(templateConfig, storeClient); err != nil {
 			logger.Fatal(err.Error())
 		}
 		os.Exit(0)
@@ -36,7 +38,7 @@ func StartConfd(storeClient StoreClient, onetime, watch bool, interval int) {
 		processor = IntervalProcessor(templateConfig, stopChan, doneChan, errChan, interval)
 	}
 
-	go processor.Process()
+	go processor.Process(storeClient)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)

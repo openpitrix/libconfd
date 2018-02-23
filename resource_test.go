@@ -89,11 +89,10 @@ func TestProcessTemplateResources(t *testing.T) {
 	c := Config{
 		ConfDir:     tempConfDir,
 		ConfigDir:   filepath.Join(tempConfDir, "conf.d"),
-		StoreClient: storeClient,
 		TemplateDir: filepath.Join(tempConfDir, "templates"),
 	}
 	// Process the test template resource.
-	err = Process(c)
+	err = Process(c, storeClient)
 	if err != nil {
 		t.Error(err.Error())
 	}
