@@ -5,8 +5,10 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -14,81 +16,45 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 )
 
+type EtcdOptions struct {
+	BasicAuth bool
+	UserName  string
+	Password  string
+	CACert    string
+	Cert      string
+	Key       string
+}
+
 // Client is a wrapper around the etcd client
-type Client struct {
+type EtcdClient struct {
 	client client.KeysAPI
 }
 
 // NewEtcdClient returns an *etcd.Client with a connection to named machines.
-func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, username string, password string) (*Client, error) {
-	var c client.Client
-	var kapi client.KeysAPI
-	var err error
-	var transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
+func NewEtcdClient(machines []string, opt *EtcdOptions) (*EtcdClient, error) {
+	p := new(EtcdClient)
 
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-	}
-
-	cfg := client.Config{
-		Endpoints:               machines,
-		HeaderTimeoutPerRequest: time.Duration(3) * time.Second,
-	}
-
-	if basicAuth {
-		cfg.Username = username
-		cfg.Password = password
-	}
-
-	if caCert != "" {
-		certBytes, err := ioutil.ReadFile(caCert)
-		if err != nil {
-			return &Client{kapi}, err
-		}
-
-		caCertPool := x509.NewCertPool()
-		ok := caCertPool.AppendCertsFromPEM(certBytes)
-
-		if ok {
-			tlsConfig.RootCAs = caCertPool
-		}
-	}
-
-	if cert != "" && key != "" {
-		tlsCert, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			return &Client{kapi}, err
-		}
-		tlsConfig.Certificates = []tls.Certificate{tlsCert}
-	}
-
-	transport.TLSClientConfig = tlsConfig
-	cfg.Transport = transport
-
-	c, err = client.New(cfg)
+	cfg, err := p.makeClientConfig(machines, opt)
 	if err != nil {
-		return &Client{kapi}, err
+		return nil, err
 	}
 
-	kapi = client.NewKeysAPI(c)
-	return &Client{kapi}, nil
+	c, err := client.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	p.client = client.NewKeysAPI(c)
+	return p, nil
 }
 
 // GetValues queries etcd for keys prefixed by prefix.
-func (c *Client) GetValues(keys []string) (map[string]string, error) {
+func (p *EtcdClient) GetValues(keys []string) (map[string]string, error) {
 	vars := make(map[string]string)
 	for _, key := range keys {
-		resp, err := c.client.Get(context.Background(), key, &client.GetOptions{
+		resp, err := p.client.Get(context.Background(), key, &client.GetOptions{
 			Recursive: true,
 			Sort:      true,
 			Quorum:    true,
@@ -96,7 +62,8 @@ func (c *Client) GetValues(keys []string) (map[string]string, error) {
 		if err != nil {
 			return vars, err
 		}
-		err = nodeWalk(resp.Node, vars)
+
+		err = p.nodeWalk(resp.Node, vars)
 		if err != nil {
 			return vars, err
 		}
@@ -104,22 +71,7 @@ func (c *Client) GetValues(keys []string) (map[string]string, error) {
 	return vars, nil
 }
 
-// nodeWalk recursively descends nodes, updating vars.
-func nodeWalk(node *client.Node, vars map[string]string) error {
-	if node != nil {
-		key := node.Key
-		if !node.Dir {
-			vars[key] = node.Value
-		} else {
-			for _, node := range node.Nodes {
-				nodeWalk(node, vars)
-			}
-		}
-	}
-	return nil
-}
-
-func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
+func (p *EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	// return something > 0 to trigger a key retrieval from the store
 	if waitIndex == 0 {
 		return 1, nil
@@ -129,7 +81,12 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 		// Setting AfterIndex to 0 (default) means that the Watcher
 		// should start watching for events starting at the current
 		// index, whatever that may be.
-		watcher := c.client.Watcher(prefix, &client.WatcherOptions{AfterIndex: uint64(0), Recursive: true})
+		watcher := p.client.Watcher(prefix,
+			&client.WatcherOptions{
+				AfterIndex: uint64(0),
+				Recursive:  true,
+			},
+		)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancelRoutine := make(chan bool)
 		defer close(cancelRoutine)
@@ -164,4 +121,84 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 			}
 		}
 	}
+}
+
+func (*EtcdClient) makeClientConfig(machines []string, opt *EtcdOptions) (client.Config, error) {
+	tlsConfig, err := new(EtcdClient).makeTlsConfig(opt)
+	if err != nil {
+		return client.Config{}, err
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	cfg := client.Config{
+		Endpoints:               append([]string{}, machines...),
+		HeaderTimeoutPerRequest: time.Duration(3) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:     tlsConfig,
+			Proxy:               http.ProxyFromEnvironment,
+			Dial:                dialer.Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+		},
+	}
+
+	if opt != nil && opt.BasicAuth {
+		cfg.Username = opt.UserName
+		cfg.Password = opt.Password
+	}
+
+	return cfg, nil
+}
+
+func (c *EtcdClient) makeTlsConfig(opt *EtcdOptions) (*tls.Config, error) {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+	}
+
+	if opt == nil {
+		return tlsConfig, nil
+	}
+
+	if opt.CACert != "" {
+		certBytes, err := ioutil.ReadFile(opt.CACert)
+		if err != nil {
+			return nil, err
+		}
+
+		caCertPool := x509.NewCertPool()
+		ok := caCertPool.AppendCertsFromPEM(certBytes)
+		if !ok {
+			return nil, fmt.Errorf("EtcdClient.makeTlsConfig failed")
+		}
+
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	if opt.Cert != "" && opt.Key != "" {
+		tlsCert, err := tls.LoadX509KeyPair(opt.Cert, opt.Key)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{tlsCert}
+	}
+
+	return tlsConfig, nil
+}
+
+// nodeWalk recursively descends nodes, updating vars.
+func (c *EtcdClient) nodeWalk(node *client.Node, vars map[string]string) error {
+	if node != nil {
+		key := node.Key
+		if !node.Dir {
+			vars[key] = node.Value
+		} else {
+			for _, node := range node.Nodes {
+				c.nodeWalk(node, vars)
+			}
+		}
+	}
+	return nil
 }
