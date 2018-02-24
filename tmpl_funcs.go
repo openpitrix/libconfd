@@ -19,17 +19,21 @@ import (
 	"time"
 )
 
+var DefaultTemplateFuncMap = map[string]interface{}{
+	//
+}
+
 type FuncMap template.FuncMap
 
 func NewFuncMap() FuncMap {
 	m := make(FuncMap)
 	m["base"] = path.Base
 	m["split"] = strings.Split
-	m["json"] = tmplFunc_unmarshalJsonObject
-	m["jsonArray"] = tmplFunc_unmarshalJsonArray
+	m["json"] = TemplateFunc(0).UnmarshalJsonObject
+	m["jsonArray"] = TemplateFunc(0).UnmarshalJsonArray
 	m["dir"] = path.Dir
-	m["map"] = tmplFunc_createMap
-	m["getenv"] = tmplFunc_getenv
+	m["map"] = TemplateFunc(0).CreateMap
+	m["getenv"] = TemplateFunc(0).Getenv
 	m["join"] = strings.Join
 	m["datetime"] = time.Now
 	m["toUpper"] = strings.ToUpper
@@ -37,21 +41,21 @@ func NewFuncMap() FuncMap {
 	m["contains"] = strings.Contains
 	m["replace"] = strings.Replace
 	m["trimSuffix"] = strings.TrimSuffix
-	m["lookupIP"] = tmplFunc_lookupIP
-	m["lookupSRV"] = tmplFunc_lookupSRV
+	m["lookupIP"] = TemplateFunc(0).LookupIP
+	m["lookupSRV"] = TemplateFunc(0).LookupSRV
 	m["fileExists"] = utilFileExist
-	m["base64Encode"] = tmplFunc_base64Encode
-	m["base64Decode"] = tmplFunc_base64Decode
+	m["base64Encode"] = TemplateFunc(0).Base64Encode
+	m["base64Decode"] = TemplateFunc(0).Base64Decode
 	m["parseBool"] = strconv.ParseBool
-	m["reverse"] = tmplFunc_reverse
-	m["sortByLength"] = tmplFunc_sortByLength
-	m["sortKVByLength"] = tmplFunc_sortKVByLength
+	m["reverse"] = TemplateFunc(0).Reverse
+	m["sortByLength"] = TemplateFunc(0).SortByLength
+	m["sortKVByLength"] = TemplateFunc(0).SortKVByLength
 	m["add"] = func(a, b int) int { return a + b }
 	m["sub"] = func(a, b int) int { return a - b }
 	m["div"] = func(a, b int) int { return a / b }
 	m["mod"] = func(a, b int) int { return a % b }
 	m["mul"] = func(a, b int) int { return a * b }
-	m["seq"] = tmplFunc_seq
+	m["seq"] = TemplateFunc(0).Seq
 	m["atoi"] = strconv.Atoi
 	return m
 }
@@ -62,9 +66,11 @@ func (m FuncMap) AddFuncs(in map[string]interface{}) {
 	}
 }
 
+type TemplateFunc int
+
 // seq creates a sequence of integers. It's named and used as GNU's seq.
 // seq takes the first and the last element as arguments. So Seq(3, 5) will generate [3,4,5]
-func tmplFunc_seq(first, last int) []int {
+func (TemplateFunc) Seq(first, last int) []int {
 	var arr []int
 	for i := first; i <= last; i++ {
 		arr = append(arr, i)
@@ -72,14 +78,14 @@ func tmplFunc_seq(first, last int) []int {
 	return arr
 }
 
-func tmplFunc_sortKVByLength(values []KVPair) []KVPair {
+func (TemplateFunc) SortKVByLength(values []KVPair) []KVPair {
 	sort.Slice(values, func(i, j int) bool {
 		return len(values[i].Key) < len(values[j].Key)
 	})
 	return values
 }
 
-func tmplFunc_sortByLength(values []string) []string {
+func (TemplateFunc) SortByLength(values []string) []string {
 	sort.Slice(values, func(i, j int) bool {
 		return len(values[i]) < len(values[j])
 	})
@@ -88,7 +94,7 @@ func tmplFunc_sortByLength(values []string) []string {
 
 // reverse returns the array in reversed order
 // works with []string and []KVPair
-func tmplFunc_reverse(values interface{}) interface{} {
+func (TemplateFunc) Reverse(values interface{}) interface{} {
 	switch values.(type) {
 	case []string:
 		v := values.([]string)
@@ -107,7 +113,7 @@ func tmplFunc_reverse(values interface{}) interface{} {
 // getenv retrieves the value of the environment variable named by the key.
 // It returns the value, which will the default value if the variable is not present.
 // If no default value was given - returns "".
-func tmplFunc_getenv(key string, defaultValue ...string) string {
+func (TemplateFunc) Getenv(key string, defaultValue ...string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
@@ -119,7 +125,7 @@ func tmplFunc_getenv(key string, defaultValue ...string) string {
 
 // createMap creates a key-value map of string -> interface{}
 // The i'th is the key and the i+1 is the value
-func tmplFunc_createMap(values ...interface{}) (map[string]interface{}, error) {
+func (TemplateFunc) CreateMap(values ...interface{}) (map[string]interface{}, error) {
 	if len(values)%2 != 0 {
 		return nil, errors.New("invalid map call")
 	}
@@ -134,19 +140,19 @@ func tmplFunc_createMap(values ...interface{}) (map[string]interface{}, error) {
 	return dict, nil
 }
 
-func tmplFunc_unmarshalJsonObject(data string) (map[string]interface{}, error) {
+func (TemplateFunc) UnmarshalJsonObject(data string) (map[string]interface{}, error) {
 	var ret map[string]interface{}
 	err := json.Unmarshal([]byte(data), &ret)
 	return ret, err
 }
 
-func tmplFunc_unmarshalJsonArray(data string) ([]interface{}, error) {
+func (TemplateFunc) UnmarshalJsonArray(data string) ([]interface{}, error) {
 	var ret []interface{}
 	err := json.Unmarshal([]byte(data), &ret)
 	return ret, err
 }
 
-func tmplFunc_lookupIP(data string) []string {
+func (TemplateFunc) LookupIP(data string) []string {
 	ips, err := net.LookupIP(data)
 	if err != nil {
 		return nil
@@ -161,7 +167,7 @@ func tmplFunc_lookupIP(data string) []string {
 	return ipStrings
 }
 
-func tmplFunc_lookupSRV(service, proto, name string) []*net.SRV {
+func (TemplateFunc) LookupSRV(service, proto, name string) []*net.SRV {
 	_, s, err := net.LookupSRV(service, proto, name)
 	if err != nil {
 		return []*net.SRV{}
@@ -175,11 +181,11 @@ func tmplFunc_lookupSRV(service, proto, name string) []*net.SRV {
 	return s
 }
 
-func tmplFunc_base64Encode(data string) string {
+func (TemplateFunc) Base64Encode(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
 }
 
-func tmplFunc_base64Decode(data string) (string, error) {
+func (TemplateFunc) Base64Decode(data string) (string, error) {
 	s, err := base64.StdEncoding.DecodeString(data)
 	return string(s), err
 }
