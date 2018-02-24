@@ -21,24 +21,29 @@ import (
 )
 
 func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap {
+	p := TemplateFunc{
+		Store:         store,
+		PGPPrivateKey: pgpPrivateKey,
+	}
+
 	m := template.FuncMap{
 		// KVStore
-		"exists": store.Exists,
-		"ls":     store.List,
-		"lsdir":  store.ListDir,
-		"get":    store.Get,
-		"gets":   store.GetAll,
-		"getv":   store.GetValue,
-		"getvs":  store.GetAllValues,
+		"exists": p.Exists,
+		"ls":     p.Ls,
+		"lsdir":  p.Lsdir,
+		"get":    p.Get,
+		"gets":   p.Gets,
+		"getv":   p.Getv,
+		"getvs":  p.Getvs,
 
 		// more tmpl func
 		"base":           path.Base,
 		"split":          strings.Split,
-		"json":           TemplateFunc(0).UnmarshalJsonObject,
-		"jsonArray":      TemplateFunc(0).UnmarshalJsonArray,
+		"json":           p.UnmarshalJsonObject,
+		"jsonArray":      p.UnmarshalJsonArray,
 		"dir":            path.Dir,
-		"map":            TemplateFunc(0).CreateMap,
-		"getenv":         TemplateFunc(0).Getenv,
+		"map":            p.CreateMap,
+		"getenv":         p.Getenv,
 		"join":           strings.Join,
 		"datetime":       time.Now,
 		"toUpper":        strings.ToUpper,
@@ -46,21 +51,21 @@ func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap 
 		"contains":       strings.Contains,
 		"replace":        strings.Replace,
 		"trimSuffix":     strings.TrimSuffix,
-		"lookupIP":       TemplateFunc(0).LookupIP,
-		"lookupSRV":      TemplateFunc(0).LookupSRV,
+		"lookupIP":       p.LookupIP,
+		"lookupSRV":      p.LookupSRV,
 		"fileExists":     utilFileExist,
-		"base64Encode":   TemplateFunc(0).Base64Encode,
-		"base64Decode":   TemplateFunc(0).Base64Decode,
+		"base64Encode":   p.Base64Encode,
+		"base64Decode":   p.Base64Decode,
 		"parseBool":      strconv.ParseBool,
-		"reverse":        TemplateFunc(0).Reverse,
-		"sortByLength":   TemplateFunc(0).SortByLength,
-		"sortKVByLength": TemplateFunc(0).SortKVByLength,
+		"reverse":        p.Reverse,
+		"sortByLength":   p.SortByLength,
+		"sortKVByLength": p.SortKVByLength,
 		"add":            func(a, b int) int { return a + b },
 		"sub":            func(a, b int) int { return a - b },
 		"div":            func(a, b int) int { return a / b },
 		"mod":            func(a, b int) int { return a % b },
 		"mul":            func(a, b int) int { return a * b },
-		"seq":            TemplateFunc(0).Seq,
+		"seq":            p.Seq,
 		"atoi":           strconv.Atoi,
 	}
 
@@ -122,7 +127,38 @@ func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap 
 	return m
 }
 
-type TemplateFunc int
+type TemplateFunc struct {
+	Store         *KVStore
+	PGPPrivateKey []byte
+}
+
+func (p TemplateFunc) Exists(key string) bool {
+	return p.Store.Exists(key)
+}
+
+func (p TemplateFunc) Ls(filepath string) []string {
+	return p.Store.List(filepath)
+}
+
+func (p TemplateFunc) Lsdir(filepath string) []string {
+	return p.Store.ListDir(filepath)
+}
+
+func (p TemplateFunc) Get(key string) (KVPair, error) {
+	return p.Store.Get(key)
+}
+
+func (p TemplateFunc) Gets(pattern string) ([]KVPair, error) {
+	return p.Store.GetAll(pattern)
+}
+
+func (p TemplateFunc) Getv(key string, v ...string) (string, error) {
+	return p.Store.GetValue(key, v...)
+}
+
+func (p TemplateFunc) Getvs(pattern string) ([]string, error) {
+	return p.Store.GetAllValues(pattern)
+}
 
 // seq creates a sequence of integers. It's named and used as GNU's seq.
 // seq takes the first and the last element as arguments. So Seq(3, 5) will generate [3,4,5]
