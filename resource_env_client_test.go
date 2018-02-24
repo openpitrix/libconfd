@@ -17,6 +17,14 @@ func NewEnvClient() (*EnvClient, error) {
 	return &EnvClient{}, nil
 }
 
+func (c *EnvClient) Close() error {
+	return nil
+}
+
+func (c *EnvClient) WatchEnabled() bool {
+	return false
+}
+
 // GetValues queries the environment for keys
 func (c *EnvClient) GetValues(keys []string) (map[string]string, error) {
 	allEnvVars := os.Environ()

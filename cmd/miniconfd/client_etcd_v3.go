@@ -12,7 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chai2010/libconfd"
 	"github.com/coreos/etcd/clientv3"
+)
+
+var (
+	_ libconfd.StoreClient = (*EtcdClient)(nil)
 )
 
 type EtcdOptions struct {
@@ -77,6 +82,14 @@ func NewEtcdClient(machines []string, opt *EtcdOptions) (*EtcdClient, error) {
 	}
 
 	return &EtcdClient{cfg}, nil
+}
+
+func (c *EtcdClient) Close() error {
+	return nil
+}
+
+func (c *EtcdClient) WatchEnabled() bool {
+	return true
 }
 
 // GetValues queries etcd for keys prefixed by prefix.
