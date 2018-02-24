@@ -28,17 +28,19 @@ type TemplateResourceConfig struct {
 
 // TemplateResource is the representation of a parsed template resource.
 type TemplateResource struct {
-	CheckCmd      string `toml:"check_cmd"`
+	Src           string
 	Dest          string
-	FileMode      os.FileMode
-	Gid           int
 	Keys          []string
 	Mode          string
 	Prefix        string
-	ReloadCmd     string `toml:"reload_cmd"`
-	Src           string
-	StageFile     *os.File
+	Gid           int
 	Uid           int
+	CheckCmd      string `toml:"check_cmd"`
+	ReloadCmd     string `toml:"reload_cmd"`
+	FileMode      os.FileMode
+	StageFile     *os.File
+	PGPPrivateKey []byte
+
 	funcMap       template.FuncMap
 	lastIndex     uint64
 	keepStageFile bool
@@ -46,7 +48,6 @@ type TemplateResource struct {
 	store         *KVStore
 	storeClient   StoreClient
 	syncOnly      bool
-	PGPPrivateKey []byte
 }
 
 func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResource, error) {
