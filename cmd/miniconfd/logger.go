@@ -8,7 +8,7 @@ import (
 	"github.com/chai2010/libconfd"
 )
 
-var logger libconfd.Logger = new(libconfd.Glogger)
+var logger libconfd.Logger = libconfd.NewGlogger()
 
 func SetLogger(l libconfd.Logger) {
 	logger = l

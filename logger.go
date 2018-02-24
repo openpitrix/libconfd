@@ -10,7 +10,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var logger Logger = new(Glogger)
+var logger Logger = new(glogger)
+
+func NewGlogger() Logger {
+	return new(glogger)
+}
 
 func SetLogger(l Logger) {
 	logger = l
@@ -34,56 +38,56 @@ type Logger interface {
 	V(l int) bool
 }
 
-type Glogger struct{}
+type glogger struct{}
 
-func (g *Glogger) Info(args ...interface{}) {
+func (_ *glogger) Info(args ...interface{}) {
 	glog.InfoDepth(1, args...)
 }
 
-func (g *Glogger) Infoln(args ...interface{}) {
+func (_ *glogger) Infoln(args ...interface{}) {
 	glog.InfoDepth(1, fmt.Sprintln(args...))
 }
 
-func (g *Glogger) Infof(format string, args ...interface{}) {
+func (_ *glogger) Infof(format string, args ...interface{}) {
 	glog.InfoDepth(1, fmt.Sprintf(format, args...))
 }
 
-func (g *Glogger) Warning(args ...interface{}) {
+func (_ *glogger) Warning(args ...interface{}) {
 	glog.WarningDepth(1, args...)
 }
 
-func (g *Glogger) Warningln(args ...interface{}) {
+func (_ *glogger) Warningln(args ...interface{}) {
 	glog.WarningDepth(1, fmt.Sprintln(args...))
 }
 
-func (g *Glogger) Warningf(format string, args ...interface{}) {
+func (_ *glogger) Warningf(format string, args ...interface{}) {
 	glog.WarningDepth(1, fmt.Sprintf(format, args...))
 }
 
-func (g *Glogger) Error(args ...interface{}) {
+func (_ *glogger) Error(args ...interface{}) {
 	glog.ErrorDepth(1, args...)
 }
 
-func (g *Glogger) Errorln(args ...interface{}) {
+func (_ *glogger) Errorln(args ...interface{}) {
 	glog.ErrorDepth(1, fmt.Sprintln(args...))
 }
 
-func (g *Glogger) Errorf(format string, args ...interface{}) {
+func (_ *glogger) Errorf(format string, args ...interface{}) {
 	glog.ErrorDepth(1, fmt.Sprintf(format, args...))
 }
 
-func (g *Glogger) Fatal(args ...interface{}) {
+func (_ *glogger) Fatal(args ...interface{}) {
 	glog.FatalDepth(1, args...)
 }
 
-func (g *Glogger) Fatalln(args ...interface{}) {
+func (_ *glogger) Fatalln(args ...interface{}) {
 	glog.FatalDepth(1, fmt.Sprintln(args...))
 }
 
-func (g *Glogger) Fatalf(format string, args ...interface{}) {
+func (_ *glogger) Fatalf(format string, args ...interface{}) {
 	glog.FatalDepth(1, fmt.Sprintf(format, args...))
 }
 
-func (g *Glogger) V(l int) bool {
+func (_ *glogger) V(l int) bool {
 	return bool(glog.V(glog.Level(l)))
 }

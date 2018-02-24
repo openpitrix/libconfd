@@ -5,7 +5,7 @@
 package libconfd
 
 func ExampleLogger() {
-	var logger Logger = new(Glogger)
+	var logger Logger = NewGlogger()
 
 	logger.Info("hello")
 	logger.Warning("confd")
