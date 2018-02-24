@@ -33,8 +33,11 @@ import (
 //					└── subsub2.toml
 //
 func tCreateRecursiveDirs() (rootDir string, err error) {
-	mod := os.FileMode(0755)
-	flag := os.O_RDWR | os.O_CREATE | os.O_EXCL
+	var (
+		mod  = os.FileMode(0755)
+		flag = os.O_RDWR | os.O_CREATE | os.O_EXCL
+	)
+
 	rootDir, err = ioutil.TempDir("", "")
 	if err != nil {
 		return "", err
@@ -64,6 +67,7 @@ func tCreateRecursiveDirs() (rootDir string, err error) {
 	if err != nil {
 		return "", err
 	}
+
 	subDir2 := filepath.Join(rootDir, "subDir2")
 	err = os.Mkdir(subDir2, mod)
 	if err != nil {
@@ -81,6 +85,7 @@ func tCreateRecursiveDirs() (rootDir string, err error) {
 	if err != nil {
 		return "", err
 	}
+
 	subSubDir := filepath.Join(subDir2, "subSubDir")
 	err = os.Mkdir(subSubDir, mod)
 	if err != nil {
@@ -108,11 +113,13 @@ func TestUtilRecursiveFindFiles(t *testing.T) {
 		t.Errorf("Failed to create temp dirs: %v", err)
 	}
 	defer os.RemoveAll(rootDir)
+
 	files, err := utilRecursiveFindFiles(rootDir, "*toml")
 	if err != nil {
 		t.Errorf("Failed to run recursiveFindFiles, got error: %v", err)
 	}
 	sort.Strings(files)
+
 	exceptedFiles := []string{
 		rootDir + "/" + "root.toml",
 		rootDir + "/subDir1/" + "sub1.toml",
@@ -121,6 +128,9 @@ func TestUtilRecursiveFindFiles(t *testing.T) {
 		rootDir + "/subDir2/" + "sub22.toml",
 		rootDir + "/subDir2/subSubDir/" + "subsub.toml",
 		rootDir + "/subDir2/subSubDir/" + "subsub2.toml",
+	}
+	if len(exceptedFiles) != len(files) {
+		t.FailNow()
 	}
 	for i, f := range exceptedFiles {
 		if f != files[i] {

@@ -14,7 +14,7 @@ import (
 
 // utilFileStat return a fileInfo describing the named file.
 func utilFileStat(name string) (fi fileInfo, err error) {
-	if !isFileExist(name) {
+	if !utilFileExist(name) {
 		err = errors.New("File not found")
 		return
 	}

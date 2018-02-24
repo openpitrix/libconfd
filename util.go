@@ -75,10 +75,7 @@ func utilSameConfig(src, dest string) (bool, error) {
 // utilRecursiveFindFiles find files with pattern in the root with depth.
 func utilRecursiveFindFiles(root string, pattern string) (files []string, err error) {
 	err = filepath.Walk(root, func(path string, f os.FileInfo, err error) (inner error) {
-		if err != nil {
-			return
-		}
-		if f.IsDir() {
+		if err != nil || f.IsDir() {
 			return
 		}
 		if matched, _ := filepath.Match(pattern, f.Name()); matched {
