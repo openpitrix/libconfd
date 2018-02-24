@@ -5,7 +5,6 @@
 package libconfd
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -65,7 +64,7 @@ func ServeConfd(cfg Config, client StoreClient, opt Options) {
 		case err := <-errChan:
 			logger.Error(err)
 		case s := <-signalChan:
-			logger.Info(fmt.Sprintf("Captured %v. Exiting...", s))
+			logger.Infof("Captured %v. Exiting...", s)
 			close(doneChan)
 		case <-doneChan:
 			os.Exit(0)

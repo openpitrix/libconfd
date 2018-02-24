@@ -5,7 +5,6 @@
 package libconfd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 )
@@ -52,7 +51,7 @@ func (c *EnvClient) GetValues(keys []string) (map[string]string, error) {
 	}
 
 	if logger.V(1) {
-		logger.Info(fmt.Sprintf("Key Map: %#v", vars))
+		logger.Infof("Key Map: %#v", vars)
 	}
 	return vars, nil
 }

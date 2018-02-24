@@ -70,7 +70,7 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 
 	for _, p := range paths {
 		if logger.V(1) {
-			logger.Info(fmt.Sprintf("Found template: %s", p))
+			logger.Infof("Found template: %s", p)
 		}
 		t, err := NewTemplateResource(p, config, client)
 		if err != nil {
@@ -368,7 +368,7 @@ func runCommand(cmd string) error {
 		return err
 	}
 	if logger.V(1) {
-		logger.Info(fmt.Sprintf("%q", string(output)))
+		logger.Infof("%q", string(output))
 	}
 	return nil
 }
