@@ -2,6 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE-confd file.
 
+//go:generate go run gen_tmpl_func_list.go -output tmpl_funcs_zz.go
+
 package libconfd
 
 import (
@@ -26,6 +28,8 @@ type TemplateFunc struct {
 	PGPPrivateKey []byte
 }
 
+var _TemplateFunc_initFuncMap func(p *TemplateFunc) = nil
+
 func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
 	return TemplateFunc{
 		Store:         store,
@@ -39,57 +43,11 @@ func NewTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, tem
 		PGPPrivateKey: pgpPrivateKey,
 	}
 
-	p.FuncMap = template.FuncMap{
-		// KVStore
-		"exists": p.Exists,
-		"ls":     p.Ls,
-		"lsdir":  p.Lsdir,
-		"get":    p.Get,
-		"gets":   p.Gets,
-		"getv":   p.Getv,
-		"getvs":  p.Getvs,
-
-		// more tmpl func
-		"base":           p.Base,
-		"split":          p.Split,
-		"json":           p.Json,
-		"jsonArray":      p.JsonArray,
-		"dir":            p.Dir,
-		"map":            p.Map,
-		"getenv":         p.Getenv,
-		"join":           p.Join,
-		"datetime":       p.Datetime,
-		"toUpper":        p.ToUpper,
-		"toLower":        p.ToLower,
-		"contains":       p.Contains,
-		"replace":        p.Replace,
-		"trimSuffix":     p.TrimSuffix,
-		"lookupIP":       p.LookupIP,
-		"lookupSRV":      p.LookupSRV,
-		"fileExists":     p.FileExists,
-		"base64Encode":   p.Base64Encode,
-		"base64Decode":   p.Base64Decode,
-		"parseBool":      p.ParseBool,
-		"reverse":        p.Reverse,
-		"sortByLength":   p.SortByLength,
-		"sortKVByLength": p.SortKVByLength,
-		"add":            p.Add,
-		"sub":            p.Sub,
-		"div":            p.Div,
-		"mod":            p.Mod,
-		"mul":            p.Mul,
-		"seq":            p.Seq,
-		"atoi":           p.Atoi,
+	if _TemplateFunc_initFuncMap == nil {
+		panic("_TemplateFunc_initFuncMap missing")
 	}
 
-	// crypt func
-	if len(pgpPrivateKey) > 0 {
-		p.FuncMap["cget"] = p.Cget
-		p.FuncMap["cgets"] = p.Cgets
-		p.FuncMap["cgetv"] = p.Cgetv
-		p.FuncMap["cgetvs"] = p.Cgetvs
-	}
-
+	_TemplateFunc_initFuncMap(&p)
 	return p, p.FuncMap
 }
 
@@ -130,6 +88,10 @@ func (p TemplateFunc) Getvs(pattern string) ([]string, error) {
 // ----------------------------------------------------------------------------
 
 func (p TemplateFunc) Cget(key string) (KVPair, error) {
+	if len(p.PGPPrivateKey) == 0 {
+		return KVPair{}, fmt.Errorf("PGPPrivateKey is empty")
+	}
+
 	kv, err := p.FuncMap["get"].(func(string) (KVPair, error))(key)
 	if err == nil {
 		var b []byte
@@ -142,6 +104,10 @@ func (p TemplateFunc) Cget(key string) (KVPair, error) {
 }
 
 func (p TemplateFunc) Cgets(pattern string) ([]KVPair, error) {
+	if len(p.PGPPrivateKey) == 0 {
+		return nil, fmt.Errorf("PGPPrivateKey is empty")
+	}
+
 	kvs, err := p.FuncMap["gets"].(func(string) ([]KVPair, error))(pattern)
 	if err == nil {
 		for i := range kvs {
@@ -156,6 +122,10 @@ func (p TemplateFunc) Cgets(pattern string) ([]KVPair, error) {
 }
 
 func (p TemplateFunc) Cgetv(key string) (string, error) {
+	if len(p.PGPPrivateKey) == 0 {
+		return "", fmt.Errorf("PGPPrivateKey is empty")
+	}
+
 	v, err := p.FuncMap["getv"].(func(string, ...string) (string, error))(key)
 	if err == nil {
 		var b []byte
@@ -168,6 +138,10 @@ func (p TemplateFunc) Cgetv(key string) (string, error) {
 }
 
 func (p TemplateFunc) Cgetvs(pattern string) ([]string, error) {
+	if len(p.PGPPrivateKey) == 0 {
+		return nil, fmt.Errorf("PGPPrivateKey is empty")
+	}
+
 	vs, err := p.FuncMap["getvs"].(func(string) ([]string, error))(pattern)
 	if err == nil {
 		for i := range vs {
