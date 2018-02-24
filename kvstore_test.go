@@ -18,7 +18,7 @@ var tKVStore_gettests = []struct {
 }{
 	{"/db/user", "admin", nil, KVPair{"/db/user", "admin"}},
 	{"/db/pass", "foo", nil, KVPair{"/db/pass", "foo"}},
-	{"/missing", "", &KeyError{"/missing", ErrNotExist}, KVPair{}},
+	{"/missing", "", ErrNotExist, KVPair{}},
 }
 
 func TestKVStore_get(t *testing.T) {
@@ -42,7 +42,7 @@ var tKVStore_getvtests = []struct {
 }{
 	{"/db/user", "admin", nil, "admin"},
 	{"/db/pass", "foo", nil, "foo"},
-	{"/missing", "", &KeyError{"/missing", ErrNotExist}, ""},
+	{"/missing", "", ErrNotExist, ""},
 }
 
 func TestKVStore_getValue(t *testing.T) {
@@ -140,7 +140,7 @@ func TestKVStore_del(t *testing.T) {
 	s.Del("/app/port")
 	want = KVPair{}
 	got, err = s.Get("/app/port")
-	if !reflect.DeepEqual(err, &KeyError{"/app/port", ErrNotExist}) || got != want {
+	if err != ErrNotExist || got != want {
 		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, false)
 	}
 	s.Del("/app/port")
@@ -157,7 +157,7 @@ func TestKVStore_purge(t *testing.T) {
 	s.Purge()
 	want = KVPair{}
 	got, err = s.Get("/app/port")
-	if !reflect.DeepEqual(err, &KeyError{"/app/port", ErrNotExist}) || got != want {
+	if err != ErrNotExist || got != want {
 		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, false)
 	}
 	s.Set("/app/port", "8080")

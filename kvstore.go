@@ -53,7 +53,7 @@ func (s *KVStore) Get(key string) (KVPair, error) {
 
 	kv, ok := s.m[key]
 	if !ok {
-		return kv, &KeyError{key, ErrNotExist}
+		return KVPair{}, ErrNotExist
 	}
 	return kv, nil
 }
