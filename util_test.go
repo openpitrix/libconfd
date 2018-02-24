@@ -12,16 +12,18 @@ import (
 	"testing"
 )
 
-// createRecursiveDirs is a helper function which creates temporary directorie
+//
+// tCreateRecursiveDirs is a helper function which creates temporary directorie
 // has sub directories, and files with different extionname which will be used
 // fo function findrecursiveFindFiles's test case.The result looks like:
-// ├── root.other1
-// ├── root.toml
-// ├── subDir1
-// │   ├── sub1.other
-// │   ├── sub1.toml
-// │   └── sub12.toml
-// └── subDir2
+//
+//	├── root.other1
+//	├── root.toml
+//	├── subDir1
+//	│   ├── sub1.other
+//	│   ├── sub1.toml
+//	│   └── sub12.toml
+//	└── subDir2
 //			├── sub2.other
 //			├── sub2.toml
 //			├── sub22.toml
@@ -29,7 +31,8 @@ import (
 //					├── subsub.other
 //					├── subsub.toml
 //					└── subsub2.toml
-func createRecursiveDirs() (rootDir string, err error) {
+//
+func tCreateRecursiveDirs() (rootDir string, err error) {
 	mod := os.FileMode(0755)
 	flag := os.O_RDWR | os.O_CREATE | os.O_EXCL
 	rootDir, err = ioutil.TempDir("", "")
@@ -100,7 +103,7 @@ func createRecursiveDirs() (rootDir string, err error) {
 
 func TestRecursiveFindFiles(t *testing.T) {
 	// Setup temporary directories
-	rootDir, err := createRecursiveDirs()
+	rootDir, err := tCreateRecursiveDirs()
 	if err != nil {
 		t.Errorf("Failed to create temp dirs: %v", err)
 	}
