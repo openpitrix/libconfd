@@ -91,6 +91,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	if logger.V(1) {
 		logger.Info("Loading template resource from " + path)
 	}
+
 	_, err := toml.DecodeFile(path, &tc)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
@@ -100,13 +101,8 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
 	tr.storeClient = client
-	tr.funcMap = MakeDefaultFuncMap()
 	tr.store = NewKVStore()
 	tr.syncOnly = config.SyncOnly
-
-	for k, fn := range tr.store.FuncMap {
-		tr.funcMap[k] = fn
-	}
 
 	if config.Prefix != "" {
 		tr.Prefix = config.Prefix
@@ -118,16 +114,6 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 
 	if len(config.PGPPrivateKey) > 0 {
 		tr.PGPPrivateKey = config.PGPPrivateKey
-
-		// add crypt funcs
-		for k, fn := range map[string]interface{}{
-			"cget":   tr.TmplFunc_Cget,
-			"cgets":  tr.TmplFunc_Cgets,
-			"cgetv":  tr.TmplFunc_Cgetv,
-			"cgetvs": tr.TmplFunc_Cgetvs,
-		} {
-			tr.funcMap[k] = fn
-		}
 	}
 
 	if tr.Src == "" {
@@ -142,60 +128,10 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 		tr.Gid = os.Getegid()
 	}
 
+	tr.funcMap = MakeTemplateFuncMap(tr.store, tr.PGPPrivateKey)
 	tr.Src = filepath.Join(config.TemplateDir, tr.Src)
+
 	return &tr, nil
-}
-
-func (p *TemplateResource) TmplFunc_Cget(key string) (KVPair, error) {
-	kv, err := p.funcMap["get"].(func(string) (KVPair, error))(key)
-	if err == nil {
-		var b []byte
-		b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
-		if err == nil {
-			kv.Value = string(b)
-		}
-	}
-	return kv, err
-}
-
-func (p *TemplateResource) TmplFunc_Cgets(pattern string) ([]KVPair, error) {
-	kvs, err := p.funcMap["gets"].(func(string) ([]KVPair, error))(pattern)
-	if err == nil {
-		for i := range kvs {
-			b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(p.PGPPrivateKey))
-			if err != nil {
-				return []KVPair(nil), err
-			}
-			kvs[i].Value = string(b)
-		}
-	}
-	return kvs, err
-}
-
-func (p *TemplateResource) TmplFunc_Cgetv(key string) (string, error) {
-	v, err := p.funcMap["getv"].(func(string, ...string) (string, error))(key)
-	if err == nil {
-		var b []byte
-		b, err = secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
-		if err == nil {
-			return string(b), nil
-		}
-	}
-	return v, err
-}
-
-func (p *TemplateResource) TmplFunc_Cgetvs(pattern string) ([]string, error) {
-	vs, err := p.funcMap["getvs"].(func(string) ([]string, error))(pattern)
-	if err == nil {
-		for i := range vs {
-			b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(p.PGPPrivateKey))
-			if err != nil {
-				return []string(nil), err
-			}
-			vs[i] = string(b)
-		}
-	}
-	return vs, err
 }
 
 // setVars sets the Vars for template resource.

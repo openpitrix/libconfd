@@ -5,6 +5,7 @@
 package libconfd
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -19,38 +20,105 @@ import (
 	"time"
 )
 
-func MakeDefaultFuncMap() template.FuncMap {
-	m := make(template.FuncMap)
-	m["base"] = path.Base
-	m["split"] = strings.Split
-	m["json"] = TemplateFunc(0).UnmarshalJsonObject
-	m["jsonArray"] = TemplateFunc(0).UnmarshalJsonArray
-	m["dir"] = path.Dir
-	m["map"] = TemplateFunc(0).CreateMap
-	m["getenv"] = TemplateFunc(0).Getenv
-	m["join"] = strings.Join
-	m["datetime"] = time.Now
-	m["toUpper"] = strings.ToUpper
-	m["toLower"] = strings.ToLower
-	m["contains"] = strings.Contains
-	m["replace"] = strings.Replace
-	m["trimSuffix"] = strings.TrimSuffix
-	m["lookupIP"] = TemplateFunc(0).LookupIP
-	m["lookupSRV"] = TemplateFunc(0).LookupSRV
-	m["fileExists"] = utilFileExist
-	m["base64Encode"] = TemplateFunc(0).Base64Encode
-	m["base64Decode"] = TemplateFunc(0).Base64Decode
-	m["parseBool"] = strconv.ParseBool
-	m["reverse"] = TemplateFunc(0).Reverse
-	m["sortByLength"] = TemplateFunc(0).SortByLength
-	m["sortKVByLength"] = TemplateFunc(0).SortKVByLength
-	m["add"] = func(a, b int) int { return a + b }
-	m["sub"] = func(a, b int) int { return a - b }
-	m["div"] = func(a, b int) int { return a / b }
-	m["mod"] = func(a, b int) int { return a % b }
-	m["mul"] = func(a, b int) int { return a * b }
-	m["seq"] = TemplateFunc(0).Seq
-	m["atoi"] = strconv.Atoi
+func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap {
+	m := template.FuncMap{
+		// KVStore
+		"exists": store.Exists,
+		"ls":     store.List,
+		"lsdir":  store.ListDir,
+		"get":    store.Get,
+		"gets":   store.GetAll,
+		"getv":   store.GetValue,
+		"getvs":  store.GetAllValues,
+
+		// more tmpl func
+		"base":           path.Base,
+		"split":          strings.Split,
+		"json":           TemplateFunc(0).UnmarshalJsonObject,
+		"jsonArray":      TemplateFunc(0).UnmarshalJsonArray,
+		"dir":            path.Dir,
+		"map":            TemplateFunc(0).CreateMap,
+		"getenv":         TemplateFunc(0).Getenv,
+		"join":           strings.Join,
+		"datetime":       time.Now,
+		"toUpper":        strings.ToUpper,
+		"toLower":        strings.ToLower,
+		"contains":       strings.Contains,
+		"replace":        strings.Replace,
+		"trimSuffix":     strings.TrimSuffix,
+		"lookupIP":       TemplateFunc(0).LookupIP,
+		"lookupSRV":      TemplateFunc(0).LookupSRV,
+		"fileExists":     utilFileExist,
+		"base64Encode":   TemplateFunc(0).Base64Encode,
+		"base64Decode":   TemplateFunc(0).Base64Decode,
+		"parseBool":      strconv.ParseBool,
+		"reverse":        TemplateFunc(0).Reverse,
+		"sortByLength":   TemplateFunc(0).SortByLength,
+		"sortKVByLength": TemplateFunc(0).SortKVByLength,
+		"add":            func(a, b int) int { return a + b },
+		"sub":            func(a, b int) int { return a - b },
+		"div":            func(a, b int) int { return a / b },
+		"mod":            func(a, b int) int { return a % b },
+		"mul":            func(a, b int) int { return a * b },
+		"seq":            TemplateFunc(0).Seq,
+		"atoi":           strconv.Atoi,
+	}
+
+	// crypt func
+	if len(pgpPrivateKey) > 0 {
+		m["cget"] = func(key string) (KVPair, error) {
+			kv, err := m["get"].(func(string) (KVPair, error))(key)
+			if err == nil {
+				var b []byte
+				b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(pgpPrivateKey))
+				if err == nil {
+					kv.Value = string(b)
+				}
+			}
+			return kv, err
+		}
+
+		m["cgets"] = func(pattern string) ([]KVPair, error) {
+			kvs, err := m["gets"].(func(string) ([]KVPair, error))(pattern)
+			if err == nil {
+				for i := range kvs {
+					b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(pgpPrivateKey))
+					if err != nil {
+						return []KVPair(nil), err
+					}
+					kvs[i].Value = string(b)
+				}
+			}
+			return kvs, err
+		}
+
+		m["cgetv"] = func(key string) (string, error) {
+			v, err := m["getv"].(func(string, ...string) (string, error))(key)
+			if err == nil {
+				var b []byte
+				b, err = secconfDecode([]byte(v), bytes.NewBuffer(pgpPrivateKey))
+				if err == nil {
+					return string(b), nil
+				}
+			}
+			return v, err
+		}
+
+		m["cgetvs"] = func(pattern string) ([]string, error) {
+			vs, err := m["getvs"].(func(string) ([]string, error))(pattern)
+			if err == nil {
+				for i := range vs {
+					b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(pgpPrivateKey))
+					if err != nil {
+						return []string(nil), err
+					}
+					vs[i] = string(b)
+				}
+			}
+			return vs, err
+		}
+	}
+
 	return m
 }
 
