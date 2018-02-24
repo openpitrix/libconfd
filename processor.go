@@ -77,8 +77,6 @@ func (p *intervalProcessor) Process(client StoreClient) error {
 			continue
 		}
 	}
-
-	return nil
 }
 
 type watchProcessor struct {
