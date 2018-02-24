@@ -9,24 +9,24 @@ import (
 	"strings"
 )
 
-// Client provides a shell for the env client
-type EnvClient struct{}
+// _EnvClient provides a shell for the env client
+type _EnvClient struct{}
 
 // NewEnvClient returns a new client
-func NewEnvClient() (*EnvClient, error) {
-	return &EnvClient{}, nil
+func NewEnvClient() (StoreClient, error) {
+	return new(_EnvClient), nil
 }
 
-func (c *EnvClient) Close() error {
+func (_ *_EnvClient) Close() error {
 	return nil
 }
 
-func (c *EnvClient) WatchEnabled() bool {
+func (_ *_EnvClient) WatchEnabled() bool {
 	return false
 }
 
 // GetValues queries the environment for keys
-func (c *EnvClient) GetValues(keys []string) (map[string]string, error) {
+func (_ *_EnvClient) GetValues(keys []string) (map[string]string, error) {
 	allEnvVars := os.Environ()
 	envMap := make(map[string]string)
 	for _, e := range allEnvVars {
@@ -64,7 +64,7 @@ func (c *EnvClient) GetValues(keys []string) (map[string]string, error) {
 	return vars, nil
 }
 
-func (c *EnvClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
+func (_ *_EnvClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	<-stopChan
 	return 0, nil
 }
