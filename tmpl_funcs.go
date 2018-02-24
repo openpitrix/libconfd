@@ -19,14 +19,8 @@ import (
 	"time"
 )
 
-var DefaultTemplateFuncMap = map[string]interface{}{
-	//
-}
-
-type FuncMap template.FuncMap
-
-func NewFuncMap() FuncMap {
-	m := make(FuncMap)
+func MakeDefaultFuncMap() template.FuncMap {
+	m := make(template.FuncMap)
 	m["base"] = path.Base
 	m["split"] = strings.Split
 	m["json"] = TemplateFunc(0).UnmarshalJsonObject
@@ -58,12 +52,6 @@ func NewFuncMap() FuncMap {
 	m["seq"] = TemplateFunc(0).Seq
 	m["atoi"] = strconv.Atoi
 	return m
-}
-
-func (m FuncMap) AddFuncs(in map[string]interface{}) {
-	for name, fn := range in {
-		m[name] = fn
-	}
 }
 
 type TemplateFunc int

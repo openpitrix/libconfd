@@ -39,7 +39,7 @@ type TemplateResource struct {
 	Src           string
 	StageFile     *os.File
 	Uid           int
-	funcMap       FuncMap
+	funcMap       template.FuncMap
 	lastIndex     uint64
 	keepStageFile bool
 	noop          bool
@@ -100,10 +100,13 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
 	tr.storeClient = client
-	tr.funcMap = NewFuncMap()
+	tr.funcMap = MakeDefaultFuncMap()
 	tr.store = NewKVStore()
 	tr.syncOnly = config.SyncOnly
-	tr.funcMap.AddFuncs(tr.store.FuncMap)
+
+	for k, fn := range tr.store.FuncMap {
+		tr.funcMap[k] = fn
+	}
 
 	if config.Prefix != "" {
 		tr.Prefix = config.Prefix
@@ -115,7 +118,16 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 
 	if len(config.PGPPrivateKey) > 0 {
 		tr.PGPPrivateKey = config.PGPPrivateKey
-		addCryptFuncs(&tr)
+
+		// add crypt funcs
+		for k, fn := range map[string]interface{}{
+			"cget":   tr.TmplFunc_Cget,
+			"cgets":  tr.TmplFunc_Cgets,
+			"cgetv":  tr.TmplFunc_Cgetv,
+			"cgetvs": tr.TmplFunc_Cgetvs,
+		} {
+			tr.funcMap[k] = fn
+		}
 	}
 
 	if tr.Src == "" {
@@ -134,57 +146,56 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 	return &tr, nil
 }
 
-func addCryptFuncs(tr *TemplateResource) {
-	tr.funcMap.AddFuncs(map[string]interface{}{
-		"cget": func(key string) (KVPair, error) {
-			kv, err := tr.funcMap["get"].(func(string) (KVPair, error))(key)
-			if err == nil {
-				var b []byte
-				b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(tr.PGPPrivateKey))
-				if err == nil {
-					kv.Value = string(b)
-				}
+func (p *TemplateResource) TmplFunc_Cget(key string) (KVPair, error) {
+	kv, err := p.funcMap["get"].(func(string) (KVPair, error))(key)
+	if err == nil {
+		var b []byte
+		b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
+		if err == nil {
+			kv.Value = string(b)
+		}
+	}
+	return kv, err
+}
+
+func (p *TemplateResource) TmplFunc_Cgets(pattern string) ([]KVPair, error) {
+	kvs, err := p.funcMap["gets"].(func(string) ([]KVPair, error))(pattern)
+	if err == nil {
+		for i := range kvs {
+			b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(p.PGPPrivateKey))
+			if err != nil {
+				return []KVPair(nil), err
 			}
-			return kv, err
-		},
-		"cgets": func(pattern string) ([]KVPair, error) {
-			kvs, err := tr.funcMap["gets"].(func(string) ([]KVPair, error))(pattern)
-			if err == nil {
-				for i := range kvs {
-					b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(tr.PGPPrivateKey))
-					if err != nil {
-						return []KVPair(nil), err
-					}
-					kvs[i].Value = string(b)
-				}
+			kvs[i].Value = string(b)
+		}
+	}
+	return kvs, err
+}
+
+func (p *TemplateResource) TmplFunc_Cgetv(key string) (string, error) {
+	v, err := p.funcMap["getv"].(func(string, ...string) (string, error))(key)
+	if err == nil {
+		var b []byte
+		b, err = secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
+		if err == nil {
+			return string(b), nil
+		}
+	}
+	return v, err
+}
+
+func (p *TemplateResource) TmplFunc_Cgetvs(pattern string) ([]string, error) {
+	vs, err := p.funcMap["getvs"].(func(string) ([]string, error))(pattern)
+	if err == nil {
+		for i := range vs {
+			b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(p.PGPPrivateKey))
+			if err != nil {
+				return []string(nil), err
 			}
-			return kvs, err
-		},
-		"cgetv": func(key string) (string, error) {
-			v, err := tr.funcMap["getv"].(func(string, ...string) (string, error))(key)
-			if err == nil {
-				var b []byte
-				b, err = secconfDecode([]byte(v), bytes.NewBuffer(tr.PGPPrivateKey))
-				if err == nil {
-					return string(b), nil
-				}
-			}
-			return v, err
-		},
-		"cgetvs": func(pattern string) ([]string, error) {
-			vs, err := tr.funcMap["getvs"].(func(string) ([]string, error))(pattern)
-			if err == nil {
-				for i := range vs {
-					b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(tr.PGPPrivateKey))
-					if err != nil {
-						return []string(nil), err
-					}
-					vs[i] = string(b)
-				}
-			}
-			return vs, err
-		},
-	})
+			vs[i] = string(b)
+		}
+	}
+	return vs, err
 }
 
 // setVars sets the Vars for template resource.
