@@ -20,7 +20,13 @@ import (
 	"time"
 )
 
-func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap {
+type TemplateFunc struct {
+	FuncMap       map[string]interface{}
+	Store         *KVStore
+	PGPPrivateKey []byte
+}
+
+func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, template.FuncMap) {
 	p := TemplateFunc{
 		Store:         store,
 		PGPPrivateKey: pgpPrivateKey,
@@ -77,13 +83,7 @@ func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) template.FuncMap 
 		p.FuncMap["cgetvs"] = p.Cgetvs
 	}
 
-	return p.FuncMap
-}
-
-type TemplateFunc struct {
-	FuncMap       map[string]interface{}
-	Store         *KVStore
-	PGPPrivateKey []byte
+	return p, p.FuncMap
 }
 
 // ----------------------------------------------------------------------------
