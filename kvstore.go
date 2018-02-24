@@ -19,30 +19,19 @@ type KVPair struct {
 // A KVStore represents an in-memory key-value store safe for
 // concurrent access.
 type KVStore struct {
-	FuncMap map[string]interface{}
-	sync.RWMutex
-	m map[string]KVPair
+	mu sync.RWMutex
+	m  map[string]KVPair
 }
 
 // New creates and initializes a new KVStore.
 func NewKVStore() *KVStore {
-	s := &KVStore{m: make(map[string]KVPair)}
-	s.FuncMap = map[string]interface{}{
-		"exists": s.Exists,
-		"ls":     s.List,
-		"lsdir":  s.ListDir,
-		"get":    s.Get,
-		"gets":   s.GetAll,
-		"getv":   s.GetValue,
-		"getvs":  s.GetAllValues,
-	}
-	return s
+	return &KVStore{m: make(map[string]KVPair)}
 }
 
 // Delete deletes the KVPair associated with key.
 func (s *KVStore) Del(key string) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	delete(s.m, key)
 }
@@ -59,8 +48,8 @@ func (s *KVStore) Exists(key string) bool {
 // Get gets the KVPair associated with key. If there is no KVPair
 // associated with key, Get returns KVPair{}, ErrNotExist.
 func (s *KVStore) Get(key string) (KVPair, error) {
-	s.RLock()
-	defer s.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	kv, ok := s.m[key]
 	if !ok {
@@ -87,8 +76,8 @@ func (s *KVStore) GetValue(key string, v ...string) (string, error) {
 // The syntax of patterns is the same as in path.Match.
 func (s *KVStore) GetAll(pattern string) ([]KVPair, error) {
 	ks, err := func() ([]KVPair, error) {
-		s.RLock()
-		defer s.RUnlock()
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 
 		ks := make([]KVPair, 0)
 		for _, kv := range s.m {
@@ -132,8 +121,8 @@ func (s *KVStore) GetAllValues(pattern string) ([]string, error) {
 
 func (s *KVStore) List(filePath string) []string {
 	m := func() map[string]bool {
-		s.RLock()
-		defer s.RUnlock()
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 
 		m := make(map[string]bool)
 		prefix := s.pathToTerms(filePath)
@@ -162,8 +151,8 @@ func (s *KVStore) List(filePath string) []string {
 
 func (s *KVStore) ListDir(filePath string) []string {
 	m := func() map[string]bool {
-		s.RLock()
-		defer s.RUnlock()
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 
 		m := make(map[string]bool)
 		prefix := s.pathToTerms(filePath)
@@ -188,30 +177,30 @@ func (s *KVStore) ListDir(filePath string) []string {
 
 // Set sets the KVPair entry associated with key to value.
 func (s *KVStore) Set(key string, value string) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.m[key] = KVPair{key, value}
 }
 
 func (s *KVStore) Purge() {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for k := range s.m {
 		delete(s.m, k)
 	}
 }
 
-func (*KVStore) stripKey(key, prefix string) string {
+func (_ *KVStore) stripKey(key, prefix string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(key, prefix), "/")
 }
 
-func (*KVStore) pathToTerms(filePath string) []string {
+func (_ *KVStore) pathToTerms(filePath string) []string {
 	return strings.Split(path.Clean(filePath), "/")
 }
 
-func (*KVStore) samePrefixTerms(prefix, test []string) bool {
+func (_ *KVStore) samePrefixTerms(prefix, test []string) bool {
 	if len(test) < len(prefix) {
 		return false
 	}
