@@ -26,6 +26,13 @@ type TemplateFunc struct {
 	PGPPrivateKey []byte
 }
 
+func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
+	return TemplateFunc{
+		Store:         store,
+		PGPPrivateKey: pgpPrivateKey,
+	}
+}
+
 func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, template.FuncMap) {
 	p := TemplateFunc{
 		Store:         store,
