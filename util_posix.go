@@ -15,9 +15,9 @@ import (
 	"syscall"
 )
 
-// fileStat return a fileInfo describing the named file.
-func fileStat(name string) (fi fileInfo, err error) {
-	if !isFileExist(name) {
+// utilFileStat return a fileInfo describing the named file.
+func utilFileStat(name string) (fi fileInfo, err error) {
+	if !utilFileExist(name) {
 		err = errors.New("File not found")
 		return
 	}

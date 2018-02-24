@@ -55,11 +55,11 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 	if logger.V(1) {
 		logger.Info("Loading template resources from confdir " + config.ConfDir)
 	}
-	if !isFileExist(config.ConfDir) {
+	if !utilFileExist(config.ConfDir) {
 		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
 		return nil, nil
 	}
-	paths, err := recursiveFindFiles(config.ConfigDir, "*toml")
+	paths, err := utilRecursiveFindFiles(config.ConfigDir, "*toml")
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (t *TemplateResource) setVars() error {
 		logger.Info("Retrieving keys from store")
 		logger.Info("Key prefix set to " + t.Prefix)
 	}
-	result, err := t.storeClient.GetValues(appendPrefix(t.Prefix, t.Keys))
+	result, err := t.storeClient.GetValues(utilAppendPrefix(t.Prefix, t.Keys))
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (t *TemplateResource) createStageFile() error {
 	if logger.V(1) {
 		logger.Info("Using source template " + t.Src)
 	}
-	if !isFileExist(t.Src) {
+	if !utilFileExist(t.Src) {
 		return errors.New("Missing template: " + t.Src)
 	}
 
@@ -266,7 +266,7 @@ func (t *TemplateResource) sync() error {
 	if logger.V(1) {
 		logger.Info("Comparing candidate config to " + t.Dest)
 	}
-	ok, err := sameConfig(staged, t.Dest)
+	ok, err := utilSameConfig(staged, t.Dest)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -397,7 +397,7 @@ func (t *TemplateResource) process() error {
 // setFileMode sets the FileMode.
 func (t *TemplateResource) setFileMode() error {
 	if t.Mode == "" {
-		if !isFileExist(t.Dest) {
+		if !utilFileExist(t.Dest) {
 			t.FileMode = 0644
 		} else {
 			fi, err := os.Stat(t.Dest)

@@ -101,14 +101,14 @@ func tCreateRecursiveDirs() (rootDir string, err error) {
 	return
 }
 
-func TestRecursiveFindFiles(t *testing.T) {
+func TestUtilRecursiveFindFiles(t *testing.T) {
 	// Setup temporary directories
 	rootDir, err := tCreateRecursiveDirs()
 	if err != nil {
 		t.Errorf("Failed to create temp dirs: %v", err)
 	}
 	defer os.RemoveAll(rootDir)
-	files, err := recursiveFindFiles(rootDir, "*toml")
+	files, err := utilRecursiveFindFiles(rootDir, "*toml")
 	if err != nil {
 		t.Errorf("Failed to run recursiveFindFiles, got error: %v", err)
 	}

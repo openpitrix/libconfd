@@ -12,8 +12,8 @@ import (
 	"os"
 )
 
-// fileStat return a fileInfo describing the named file.
-func fileStat(name string) (fi fileInfo, err error) {
+// utilFileStat return a fileInfo describing the named file.
+func utilFileStat(name string) (fi fileInfo, err error) {
 	if !isFileExist(name) {
 		err = errors.New("File not found")
 		return

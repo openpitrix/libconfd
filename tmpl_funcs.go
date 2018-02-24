@@ -39,7 +39,7 @@ func NewFuncMap() FuncMap {
 	m["trimSuffix"] = strings.TrimSuffix
 	m["lookupIP"] = tmplFunc_lookupIP
 	m["lookupSRV"] = tmplFunc_lookupSRV
-	m["fileExists"] = isFileExist
+	m["fileExists"] = utilFileExist
 	m["base64Encode"] = tmplFunc_base64Encode
 	m["base64Decode"] = tmplFunc_base64Decode
 	m["parseBool"] = strconv.ParseBool

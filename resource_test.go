@@ -126,7 +126,7 @@ func TestSameConfigTrue(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	status, err := sameConfig(src.Name(), dest.Name())
+	status, err := utilSameConfig(src.Name(), dest.Name())
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -154,7 +154,7 @@ func TestSameConfigFalse(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	status, err := sameConfig(src.Name(), dest.Name())
+	status, err := utilSameConfig(src.Name(), dest.Name())
 	if err != nil {
 		t.Errorf("%v", err)
 	}
