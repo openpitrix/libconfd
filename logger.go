@@ -16,8 +16,9 @@ func NewGlogger() Logger {
 	return new(glogger)
 }
 
-func SetLogger(l Logger) {
-	logger = l
+func SetLogger(new Logger) (old Logger) {
+	old, logger = logger, new
+	return
 }
 
 type Logger interface {
