@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	tomlFilePath = "test/confd/config.toml"
-	tmplFilePath = "test/templates/test.conf.tmpl"
-	cryptPubKey  = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+	tTomlFilePath = "test/confd/config.toml"
+	tTmplFilePath = "test/templates/test.conf.tmpl"
+	tCryptPubKey  = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBFTw/PwBCACepvMIcaRYoG19n/e4b/kDNfTNLSseXdiWLVHHP1T30Si/bcsN
 57oXWILl/KjM5D8eElAhiQZpmWzN3UJfHxI6q6GO/LxiKS9V2WlILNLSR/IQfr89
@@ -48,7 +48,7 @@ PZMG4yQvvPxFFfeD6RCu4rv8qiHHD8+fh8diksvcaTmx47sZnWEbV3gc9Uvh3bhL
 =jz0w
 -----END PGP PUBLIC KEY BLOCK-----
 `
-	cryptPrivKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+	tCryptPrivKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQOYBFTw/PwBCACepvMIcaRYoG19n/e4b/kDNfTNLSseXdiWLVHHP1T30Si/bcsN
 57oXWILl/KjM5D8eElAhiQZpmWzN3UJfHxI6q6GO/LxiKS9V2WlILNLSR/IQfr89
@@ -108,7 +108,7 @@ tg==
 `
 )
 
-type templateTest struct {
+type tTemplateTest struct {
 	desc        string                  // description of the test (for helpful errors)
 	toml        string                  // toml file contents
 	tmpl        string                  // template file contents
@@ -116,12 +116,12 @@ type templateTest struct {
 	updateStore func(*TemplateResource) // function for setting values in store
 }
 
-// templateTests is an array of templateTest structs, each representing a test of
+// tTemplateTests is an array of tTemplateTest structs, each representing a test of
 // some aspect of template processing. When the input tmpl and toml files are
 // processed, they should produce a config file matching expected.
-var templateTests = []templateTest{
+var tTemplateTests = []tTemplateTest{
 
-	templateTest{
+	tTemplateTest{
 		desc: "base, get test",
 		toml: `
 [template]
@@ -148,7 +148,7 @@ val: abc
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "base, cget test",
 		toml: `
 [template]
@@ -171,7 +171,7 @@ val: abc
 
 `,
 		updateStore: func(tr *TemplateResource) {
-			b, err := secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err := secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -179,7 +179,7 @@ val: abc
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "gets test",
 		toml: `
 [template]
@@ -213,7 +213,7 @@ val: mary
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "cgets test",
 		toml: `
 [template]
@@ -241,19 +241,19 @@ val: mary
 
 `,
 		updateStore: func(tr *TemplateResource) {
-			b, err := secconfEncode([]byte("mary"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err := secconfEncode([]byte("mary"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
 			tr.store.Set("/crypt-test/user", string(b))
 
-			b, err = secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err = secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
 			tr.store.Set("/crypt-test/pass", string(b))
 
-			b, err = secconfEncode([]byte("url"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err = secconfEncode([]byte("url"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -261,7 +261,7 @@ val: mary
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "getv test",
 		toml: `
 [template]
@@ -286,7 +286,7 @@ user = bob
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "cgetv test",
 		toml: `
 [template]
@@ -306,12 +306,12 @@ url = http://www.abc.com
 user = bob
 `,
 		updateStore: func(tr *TemplateResource) {
-			b, err := secconfEncode([]byte("http://www.abc.com"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err := secconfEncode([]byte("http://www.abc.com"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
 			tr.store.Set("/crypt-test/url", string(b))
-			b, err = secconfEncode([]byte("bob"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err = secconfEncode([]byte("bob"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -319,7 +319,7 @@ user = bob
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "getvs test",
 		toml: `
 [template]
@@ -350,7 +350,7 @@ val: mary
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "cgetvs test",
 		toml: `
 [template]
@@ -373,19 +373,19 @@ val: mary
 
 `,
 		updateStore: func(tr *TemplateResource) {
-			b, err := secconfEncode([]byte("mary"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err := secconfEncode([]byte("mary"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
 			tr.store.Set("/crypt-test/user", string(b))
 
-			// b, err = secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(cryptPubKey)))
+			// b, err = secconfEncode([]byte("abc"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			// if err != nil {
 			// 	log.Fatal(err)
 			// }
 			// tr.store.Set("/crypt-test/pass", string(b))
 
-			b, err = secconfEncode([]byte("url"), bytes.NewBuffer([]byte(cryptPubKey)))
+			b, err = secconfEncode([]byte("url"), bytes.NewBuffer([]byte(tCryptPubKey)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -393,7 +393,7 @@ val: mary
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "split test",
 		toml: `
 [template]
@@ -420,7 +420,7 @@ bz: baz
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "toUpper test",
 		toml: `
 [template]
@@ -443,7 +443,7 @@ key: VALUE
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "toLower test",
 		toml: `
 [template]
@@ -466,7 +466,7 @@ key: value
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "json test",
 		toml: `
 [template]
@@ -500,7 +500,7 @@ ip: 192.168.10.12
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "jsonArray test",
 		toml: `
 [template]
@@ -529,7 +529,7 @@ num: 3
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "ls test",
 		toml: `
 [template]
@@ -562,7 +562,7 @@ value: ghi
 		},
 	},
 
-	templateTest{
+	tTemplateTest{
 		desc: "lsdir test",
 		toml: `
 [template]
@@ -592,7 +592,7 @@ value: jkl
 			tr.store.Set("/test/data/jkl/mno", "789")
 		},
 	},
-	templateTest{
+	tTemplateTest{
 		desc: "dir test",
 		toml: `
 [template]
@@ -618,7 +618,7 @@ dir: /test/data
 			tr.store.Set("/test/data/def", "child")
 		},
 	},
-	templateTest{
+	tTemplateTest{
 		desc: "ip lookup test",
 		toml: `
 [template]
@@ -644,7 +644,7 @@ ip: 127.0.0.1
 			tr.store.Set("/test/data/def", "child")
 		},
 	},
-	templateTest{
+	tTemplateTest{
 		desc: "base64Encode test",
 		toml: `
 [template]
@@ -666,7 +666,7 @@ key: VmFsdWU=
 			tr.store.Set("/test/data", `Value`)
 		},
 	},
-	templateTest{
+	tTemplateTest{
 		desc: "base64Decode test",
 		toml: `
 [template]
@@ -687,7 +687,7 @@ key: Value
 		updateStore: func(tr *TemplateResource) {
 			tr.store.Set("/test/data", `VmFsdWU=`)
 		},
-	}, templateTest{
+	}, tTemplateTest{
 		desc: "seq test",
 		toml: `
 [template]
@@ -701,7 +701,7 @@ dest = "./tmp/test.conf"
 [1 2 3]
 `,
 		updateStore: func(tr *TemplateResource) {},
-	}, templateTest{
+	}, tTemplateTest{
 		desc: "atoi test",
 		toml: `
 	[template]
@@ -723,21 +723,21 @@ dest = "./tmp/test.conf"
 	},
 }
 
-// TestTemplates runs all tests in templateTests
+// TestTemplates runs all tests in tTemplateTests
 func TestTemplates(t *testing.T) {
-	for _, tt := range templateTests {
-		ExecuteTestTemplate(tt, t)
+	for _, tt := range tTemplateTests {
+		tExecuteTestTemplate(tt, t)
 	}
 }
 
 // ExectureTestTemplate builds a TemplateResource based on the toml and tmpl files described
-// in the templateTest, writes a config file, and compares the result against the expectation
-// in the templateTest.
-func ExecuteTestTemplate(tt templateTest, t *testing.T) {
-	setupDirectoriesAndFiles(tt, t)
+// in the tTemplateTest, writes a config file, and compares the result against the expectation
+// in the tTemplateTest.
+func tExecuteTestTemplate(tt tTemplateTest, t *testing.T) {
+	tSetupDirectoriesAndFiles(tt, t)
 	defer os.RemoveAll("test")
 
-	tr, err := templateResource()
+	tr, err := tTemplateResource()
 	if err != nil {
 		t.Errorf("%s: failed to create TemplateResource: %v", tt.desc, err)
 	}
@@ -758,20 +758,20 @@ func ExecuteTestTemplate(tt templateTest, t *testing.T) {
 }
 
 // setUpDirectoriesAndFiles creates folders for the toml, tmpl, and output files and
-// creates the toml and tmpl files as specified in the templateTest struct.
-func setupDirectoriesAndFiles(tt templateTest, t *testing.T) {
+// creates the toml and tmpl files as specified in the tTemplateTest struct.
+func tSetupDirectoriesAndFiles(tt tTemplateTest, t *testing.T) {
 	// create confd directory and toml file
 	if err := os.MkdirAll("./test/confd", os.ModePerm); err != nil {
 		t.Errorf("%s: failed to created confd directory: %v", tt.desc, err)
 	}
-	if err := ioutil.WriteFile(tomlFilePath, []byte(tt.toml), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(tTomlFilePath, []byte(tt.toml), os.ModePerm); err != nil {
 		t.Errorf("%s: failed to write toml file: %v", tt.desc, err)
 	}
 	// create templates directory and tmpl file
 	if err := os.MkdirAll("./test/templates", os.ModePerm); err != nil {
 		t.Errorf("%s: failed to create template directory: %v", tt.desc, err)
 	}
-	if err := ioutil.WriteFile(tmplFilePath, []byte(tt.tmpl), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(tTmplFilePath, []byte(tt.tmpl), os.ModePerm); err != nil {
 		t.Errorf("%s: failed to write toml file: %v", tt.desc, err)
 	}
 	// create tmp directory for output
@@ -780,8 +780,8 @@ func setupDirectoriesAndFiles(tt templateTest, t *testing.T) {
 	}
 }
 
-// templateResource creates a templateResource for creating a config file
-func templateResource() (*TemplateResource, error) {
+// tTemplateResource creates a tTemplateResource for creating a config file
+func tTemplateResource() (*TemplateResource, error) {
 	client, err := NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -790,10 +790,10 @@ func templateResource() (*TemplateResource, error) {
 	config := Config{
 		StoreClient:   client, // not used but must be set
 		TemplateDir:   "./test/templates",
-		PGPPrivateKey: []byte(cryptPrivKey),
+		PGPPrivateKey: []byte(tCryptPrivKey),
 	}
 
-	tr, err := NewTemplateResource(tomlFilePath, config)
+	tr, err := NewTemplateResource(tTomlFilePath, config)
 	if err != nil {
 		return nil, err
 	}
