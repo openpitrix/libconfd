@@ -33,7 +33,7 @@ func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
 	}
 }
 
-func MakeTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, template.FuncMap) {
+func NewTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, template.FuncMap) {
 	p := TemplateFunc{
 		Store:         store,
 		PGPPrivateKey: pgpPrivateKey,

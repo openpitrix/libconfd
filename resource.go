@@ -128,7 +128,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 		tr.Gid = os.Getegid()
 	}
 
-	_, tr.funcMap = MakeTemplateFuncMap(tr.store, tr.PGPPrivateKey)
+	_, tr.funcMap = NewTemplateFuncMap(tr.store, tr.PGPPrivateKey)
 	tr.Src = filepath.Join(config.TemplateDir, tr.Src)
 
 	return &tr, nil
