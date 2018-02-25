@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -49,6 +47,10 @@ type TemplateResource struct {
 	storeClient   StoreClient
 	syncOnly      bool
 }
+
+//type TemplateResourceProcessor struct {
+//	TemplateResource
+//}
 
 func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResource, error) {
 	var lastError error
@@ -136,7 +138,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 }
 
 // setVars sets the Vars for template resource.
-func (t *TemplateResource) setVars() error {
+func (t *TemplateResource) SetVars() error {
 	var err error
 	if logger.V(1) {
 		logger.Info("Retrieving keys from store")
@@ -161,7 +163,7 @@ func (t *TemplateResource) setVars() error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (t *TemplateResource) createStageFile() error {
+func (t *TemplateResource) CreateStageFile() error {
 	if logger.V(1) {
 		logger.Info("Using source template " + t.Src)
 	}
@@ -203,7 +205,7 @@ func (t *TemplateResource) createStageFile() error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (t *TemplateResource) sync() error {
+func (t *TemplateResource) Sync() error {
 	staged := t.StageFile.Name()
 	if t.keepStageFile {
 		logger.Info("Keeping staged file: " + staged)
@@ -225,7 +227,7 @@ func (t *TemplateResource) sync() error {
 	if !ok {
 		logger.Info("Target config " + t.Dest + " out of sync")
 		if !t.syncOnly && t.CheckCmd != "" {
-			if err := t.check(); err != nil {
+			if err := t.Check(); err != nil {
 				return fmt.Errorf("Config check failed: %v", err)
 			}
 		}
@@ -256,7 +258,7 @@ func (t *TemplateResource) sync() error {
 			}
 		}
 		if !t.syncOnly && t.ReloadCmd != "" {
-			if err := t.reload(); err != nil {
+			if err := t.Reload(); err != nil {
 				return err
 			}
 		}
@@ -275,7 +277,7 @@ func (t *TemplateResource) sync() error {
 // check to be run on the staged file before overwriting the destination config
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
-func (t *TemplateResource) check() error {
+func (t *TemplateResource) Check() error {
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
 	data["src"] = t.StageFile.Name()
@@ -286,39 +288,13 @@ func (t *TemplateResource) check() error {
 	if err := tmpl.Execute(&cmdBuffer, data); err != nil {
 		return err
 	}
-	return runCommand(cmdBuffer.String())
+	return utilRunCommand(cmdBuffer.String())
 }
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
-func (t *TemplateResource) reload() error {
-	return runCommand(t.ReloadCmd)
-}
-
-// runCommand is a shared function used by check and reload
-// to run the given command and log its output.
-// It returns nil if the given cmd returns 0.
-// The command can be run on unix and windows.
-func runCommand(cmd string) error {
-	if logger.V(1) {
-		logger.Info("Running " + cmd)
-	}
-	var c *exec.Cmd
-	if runtime.GOOS == "windows" {
-		c = exec.Command("cmd", "/C", cmd)
-	} else {
-		c = exec.Command("/bin/sh", "-c", cmd)
-	}
-
-	output, err := c.CombinedOutput()
-	if err != nil {
-		logger.Error(fmt.Sprintf("%q", string(output)))
-		return err
-	}
-	if logger.V(1) {
-		logger.Infof("%q", string(output))
-	}
-	return nil
+func (t *TemplateResource) Reload() error {
+	return utilRunCommand(t.ReloadCmd)
 }
 
 // process is a convenience function that wraps calls to the three main tasks
@@ -326,24 +302,24 @@ func runCommand(cmd string) error {
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (t *TemplateResource) process() error {
-	if err := t.setFileMode(); err != nil {
+func (t *TemplateResource) Process() error {
+	if err := t.SetFileMode(); err != nil {
 		return err
 	}
-	if err := t.setVars(); err != nil {
+	if err := t.SetVars(); err != nil {
 		return err
 	}
-	if err := t.createStageFile(); err != nil {
+	if err := t.CreateStageFile(); err != nil {
 		return err
 	}
-	if err := t.sync(); err != nil {
+	if err := t.Sync(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // setFileMode sets the FileMode.
-func (t *TemplateResource) setFileMode() error {
+func (t *TemplateResource) SetFileMode() error {
 	if t.Mode == "" {
 		if !utilFileExist(t.Dest) {
 			t.FileMode = 0644

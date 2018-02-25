@@ -31,7 +31,7 @@ func (p *onetimeProcessor) Process(client StoreClient) error {
 
 	var allErrors []error
 	for _, t := range ts {
-		if err := t.process(); err != nil {
+		if err := t.Process(); err != nil {
 			allErrors = append(allErrors, err)
 			logger.Error(err)
 		}
@@ -65,7 +65,7 @@ func (p *intervalProcessor) Process(client StoreClient) error {
 		}
 
 		for _, t := range ts {
-			if err := t.process(); err != nil {
+			if err := t.Process(); err != nil {
 				logger.Error(err)
 			}
 		}
@@ -124,7 +124,7 @@ func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
 			continue
 		}
 		t.lastIndex = index
-		if err := t.process(); err != nil {
+		if err := t.Process(); err != nil {
 			p.errChan <- err
 		}
 	}

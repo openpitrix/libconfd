@@ -5,9 +5,12 @@
 package libconfd
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 )
 
 // fileInfo describes a configuration file and is returned by fileStat.
@@ -84,4 +87,30 @@ func utilRecursiveFindFiles(root string, pattern string) (files []string, err er
 		return
 	})
 	return
+}
+
+// utilRunCommand is a shared function used by check and reload
+// to run the given command and log its output.
+// It returns nil if the given cmd returns 0.
+// The command can be run on unix and windows.
+func utilRunCommand(cmd string) error {
+	if logger.V(1) {
+		logger.Info("Running " + cmd)
+	}
+	var c *exec.Cmd
+	if runtime.GOOS == "windows" {
+		c = exec.Command("cmd", "/C", cmd)
+	} else {
+		c = exec.Command("/bin/sh", "-c", cmd)
+	}
+
+	output, err := c.CombinedOutput()
+	if err != nil {
+		logger.Error(fmt.Sprintf("%q", string(output)))
+		return err
+	}
+	if logger.V(1) {
+		logger.Infof("%q", string(output))
+	}
+	return nil
 }
