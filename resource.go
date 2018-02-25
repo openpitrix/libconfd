@@ -31,13 +31,88 @@ type TemplateResource struct {
 	CheckCmd      string `toml:"check_cmd"`
 	ReloadCmd     string `toml:"reload_cmd"`
 	FileMode      os.FileMode
-	StageFile     *os.File
 	PGPPrivateKey []byte
+}
+
+func LoadTemplateResource(data string) (*TemplateResource, error) {
+	type TemplateResourceConfig struct {
+		TemplateResource TemplateResource `toml:"template"`
+	}
+
+	p := &TemplateResourceConfig{
+		TemplateResource: TemplateResource{
+			Gid: -1,
+			Uid: -1,
+		},
+	}
+	md, err := toml.Decode(data, p)
+	if err != nil {
+		return nil, err
+	}
+	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
+		logger.Warning("config: Undecoded keys:", unknownKeys)
+	}
+
+	return &p.TemplateResource, nil
+}
+
+func LoadTemplateResourceFile(name string) (*TemplateResource, error) {
+	type TemplateResourceConfig struct {
+		TemplateResource TemplateResource `toml:"template"`
+	}
+
+	p := &TemplateResourceConfig{
+		TemplateResource: TemplateResource{
+			Gid: -1,
+			Uid: -1,
+		},
+	}
+	md, err := toml.DecodeFile(name, p)
+	if err != nil {
+		return nil, err
+	}
+	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
+		logger.Warning("config: Undecoded keys:", unknownKeys)
+	}
+
+	return &p.TemplateResource, nil
+}
+
+func (p *TemplateResource) TomlString() string {
+	type TemplateResourceConfig struct {
+		TemplateResource TemplateResource `toml:"template"`
+	}
+
+	q := TemplateResourceConfig{
+		TemplateResource: *p,
+	}
+
+	buf := new(bytes.Buffer)
+	if err := toml.NewEncoder(buf).Encode(q); err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
+func (p *TemplateResource) SaveFile(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(p.TomlString())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type TemplateResourceProcessor struct {
 	TemplateResource
 
+	stageFile     *os.File
 	funcMap       template.FuncMap
 	lastIndex     uint64
 	keepStageFile bool
@@ -82,26 +157,17 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 
 // NewTemplateResource creates a TemplateResource.
 func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResourceProcessor, error) {
-	// TemplateResourceConfig holds the parsed template resource.
-	type TemplateResourceConfig struct {
-		TemplateResource TemplateResource `toml:"template"`
-	}
-
-	// Set the default uid and gid so we can determine if it was
-	// unset from configuration.
-	tc := &TemplateResourceConfig{TemplateResource{Uid: -1, Gid: -1}}
-
 	if logger.V(1) {
 		logger.Info("Loading template resource from " + path)
 	}
 
-	_, err := toml.DecodeFile(path, &tc)
+	res, err := LoadTemplateResourceFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
 	}
 
 	tr := TemplateResourceProcessor{
-		TemplateResource: tc.TemplateResource,
+		TemplateResource: *res,
 	}
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
@@ -198,7 +264,7 @@ func (t *TemplateResourceProcessor) CreateStageFile() error {
 	// compare against the destination configuration file later.
 	os.Chmod(temp.Name(), t.FileMode)
 	os.Chown(temp.Name(), t.Uid, t.Gid)
-	t.StageFile = temp
+	t.stageFile = temp
 	return nil
 }
 
@@ -208,7 +274,7 @@ func (t *TemplateResourceProcessor) CreateStageFile() error {
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
 func (t *TemplateResourceProcessor) Sync() error {
-	staged := t.StageFile.Name()
+	staged := t.stageFile.Name()
 	if t.keepStageFile {
 		logger.Info("Keeping staged file: " + staged)
 	} else {
@@ -282,7 +348,7 @@ func (t *TemplateResourceProcessor) Sync() error {
 func (t *TemplateResourceProcessor) Check() error {
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
-	data["src"] = t.StageFile.Name()
+	data["src"] = t.stageFile.Name()
 	tmpl, err := template.New("checkcmd").Parse(t.CheckCmd)
 	if err != nil {
 		return err
