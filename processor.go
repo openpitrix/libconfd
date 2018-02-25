@@ -112,7 +112,7 @@ func (p *watchProcessor) Process(client StoreClient) error {
 	return nil
 }
 
-func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
+func (p *watchProcessor) monitorPrefix(t *TemplateResourceProcessor) {
 	defer p.wg.Done()
 	keys := utilAppendPrefix(t.Prefix, t.Keys)
 	for {

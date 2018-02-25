@@ -33,6 +33,10 @@ type TemplateResource struct {
 	FileMode      os.FileMode
 	StageFile     *os.File
 	PGPPrivateKey []byte
+}
+
+type TemplateResourceProcessor struct {
+	TemplateResource
 
 	funcMap       template.FuncMap
 	lastIndex     uint64
@@ -43,13 +47,9 @@ type TemplateResource struct {
 	syncOnly      bool
 }
 
-//type TemplateResourceProcessor struct {
-//	TemplateResource
-//}
-
-func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResource, error) {
+func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResourceProcessor, error) {
 	var lastError error
-	templates := make([]*TemplateResource, 0)
+	templates := make([]*TemplateResourceProcessor, 0)
 	if logger.V(1) {
 		logger.Info("Loading template resources from confdir " + config.ConfDir)
 	}
@@ -81,7 +81,7 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 }
 
 // NewTemplateResource creates a TemplateResource.
-func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResource, error) {
+func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResourceProcessor, error) {
 	// TemplateResourceConfig holds the parsed template resource.
 	type TemplateResourceConfig struct {
 		TemplateResource TemplateResource `toml:"template"`
@@ -100,7 +100,9 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
 	}
 
-	tr := tc.TemplateResource
+	tr := TemplateResourceProcessor{
+		TemplateResource: tc.TemplateResource,
+	}
 	tr.keepStageFile = config.KeepStageFile
 	tr.noop = config.Noop
 	tr.storeClient = client
@@ -138,7 +140,7 @@ func NewTemplateResource(path string, config Config, client StoreClient) (*Templ
 }
 
 // setVars sets the Vars for template resource.
-func (t *TemplateResource) SetVars() error {
+func (t *TemplateResourceProcessor) SetVars() error {
 	var err error
 	if logger.V(1) {
 		logger.Info("Retrieving keys from store")
@@ -163,7 +165,7 @@ func (t *TemplateResource) SetVars() error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (t *TemplateResource) CreateStageFile() error {
+func (t *TemplateResourceProcessor) CreateStageFile() error {
 	if logger.V(1) {
 		logger.Info("Using source template " + t.Src)
 	}
@@ -205,7 +207,7 @@ func (t *TemplateResource) CreateStageFile() error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (t *TemplateResource) Sync() error {
+func (t *TemplateResourceProcessor) Sync() error {
 	staged := t.StageFile.Name()
 	if t.keepStageFile {
 		logger.Info("Keeping staged file: " + staged)
@@ -277,7 +279,7 @@ func (t *TemplateResource) Sync() error {
 // check to be run on the staged file before overwriting the destination config
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
-func (t *TemplateResource) Check() error {
+func (t *TemplateResourceProcessor) Check() error {
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
 	data["src"] = t.StageFile.Name()
@@ -293,7 +295,7 @@ func (t *TemplateResource) Check() error {
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
-func (t *TemplateResource) Reload() error {
+func (t *TemplateResourceProcessor) Reload() error {
 	return utilRunCommand(t.ReloadCmd)
 }
 
@@ -302,7 +304,7 @@ func (t *TemplateResource) Reload() error {
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (t *TemplateResource) Process() error {
+func (t *TemplateResourceProcessor) Process() error {
 	if err := t.SetFileMode(); err != nil {
 		return err
 	}
@@ -319,7 +321,7 @@ func (t *TemplateResource) Process() error {
 }
 
 // setFileMode sets the FileMode.
-func (t *TemplateResource) SetFileMode() error {
+func (t *TemplateResourceProcessor) SetFileMode() error {
 	if t.Mode == "" {
 		if !utilFileExist(t.Dest) {
 			t.FileMode = 0644
