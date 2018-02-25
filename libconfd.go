@@ -34,12 +34,26 @@ type Options struct {
 	Interval int
 }
 
-func ServeConfd(cfg Config, client BackendClient, opt Options) {
+type Confd struct {
+	cfg    Config
+	client BackendClient
+	opt    Options
+}
+
+func New(cfg Config, client BackendClient, opt Options) *Confd {
+	return &Confd{
+		cfg:    cfg,
+		client: client,
+		opt:    opt,
+	}
+}
+
+func (p *Confd) Run() {
 	logger.Info("Starting confd")
 
-	if opt.Onetime {
-		var processor = NewOnetimeProcessor(cfg)
-		if err := processor.Process(client); err != nil {
+	if p.opt.Onetime {
+		var processor = NewOnetimeProcessor(p.cfg)
+		if err := processor.Process(p.client); err != nil {
 			logger.Fatal(err)
 		}
 		os.Exit(0)
@@ -51,13 +65,13 @@ func ServeConfd(cfg Config, client BackendClient, opt Options) {
 
 	var processor Processor
 	switch {
-	case opt.Watch:
-		processor = NewWatchProcessor(cfg, stopChan, doneChan, errChan)
+	case p.opt.Watch:
+		processor = NewWatchProcessor(p.cfg, stopChan, doneChan, errChan)
 	default:
-		processor = NewIntervalProcessor(cfg, stopChan, doneChan, errChan, opt.Interval)
+		processor = NewIntervalProcessor(p.cfg, stopChan, doneChan, errChan, p.opt.Interval)
 	}
 
-	go processor.Process(client)
+	go processor.Process(p.client)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
