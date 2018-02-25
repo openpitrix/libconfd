@@ -30,7 +30,12 @@ type TemplateResourceProcessor struct {
 	syncOnly      bool
 }
 
-func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateResourceProcessor, error) {
+func MakeAllTemplateResourceProcessor(
+	config Config, client StoreClient,
+) (
+	[]*TemplateResourceProcessor,
+	error,
+) {
 	var lastError error
 	templates := make([]*TemplateResourceProcessor, 0)
 	if logger.V(1) {
@@ -53,7 +58,7 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 		if logger.V(1) {
 			logger.Infof("Found template: %s", p)
 		}
-		t, err := NewTemplateResource(p, config, client)
+		t, err := NewTemplateResourceProcessor(p, config, client)
 		if err != nil {
 			lastError = err
 			continue
@@ -63,8 +68,13 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 	return templates, lastError
 }
 
-// NewTemplateResource creates a TemplateResource.
-func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResourceProcessor, error) {
+// NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
+func NewTemplateResourceProcessor(
+	path string, config Config, client StoreClient,
+) (
+	*TemplateResourceProcessor,
+	error,
+) {
 	if logger.V(1) {
 		logger.Info("Loading template resource from " + path)
 	}

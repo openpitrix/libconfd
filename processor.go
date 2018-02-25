@@ -24,7 +24,7 @@ type onetimeProcessor struct {
 }
 
 func (p *onetimeProcessor) Process(client StoreClient) error {
-	ts, err := MakeTemplateResourceList(p.config, client)
+	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func NewIntervalProcessor(config Config, stopChan, doneChan chan bool, errChan c
 func (p *intervalProcessor) Process(client StoreClient) error {
 	defer close(p.doneChan)
 	for {
-		ts, err := MakeTemplateResourceList(p.config, client)
+		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 		if err != nil {
 			logger.Warning(err)
 			return err
@@ -98,7 +98,7 @@ func NewWatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan
 
 func (p *watchProcessor) Process(client StoreClient) error {
 	defer close(p.doneChan)
-	ts, err := MakeTemplateResourceList(p.config, client)
+	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
 		logger.Warning(err)
 		return err
