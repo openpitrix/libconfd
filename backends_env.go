@@ -13,7 +13,7 @@ import (
 type _EnvClient struct{}
 
 // NewEnvClient returns a new client
-func NewEnvClient() (StoreClient, error) {
+func NewEnvBackendClient() (BackendClient, error) {
 	return new(_EnvClient), nil
 }
 

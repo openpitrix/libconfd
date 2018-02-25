@@ -21,7 +21,7 @@ type Config struct {
 	PGPPrivateKey []byte
 }
 
-type StoreClient interface {
+type BackendClient interface {
 	WatchEnabled() bool
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
@@ -34,7 +34,7 @@ type Options struct {
 	Interval int
 }
 
-func ServeConfd(cfg Config, client StoreClient, opt Options) {
+func ServeConfd(cfg Config, client BackendClient, opt Options) {
 	logger.Info("Starting confd")
 
 	if opt.Onetime {

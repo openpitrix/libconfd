@@ -10,7 +10,7 @@ import (
 )
 
 type Processor interface {
-	Process(client StoreClient) error
+	Process(client BackendClient) error
 }
 
 func NewOnetimeProcessor(cfg Config) Processor {
@@ -23,7 +23,7 @@ type onetimeProcessor struct {
 	config Config
 }
 
-func (p *onetimeProcessor) Process(client StoreClient) error {
+func (p *onetimeProcessor) Process(client BackendClient) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func NewIntervalProcessor(config Config, stopChan, doneChan chan bool, errChan c
 	return &intervalProcessor{config, stopChan, doneChan, errChan, interval}
 }
 
-func (p *intervalProcessor) Process(client StoreClient) error {
+func (p *intervalProcessor) Process(client BackendClient) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
@@ -96,7 +96,7 @@ func NewWatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan
 	}
 }
 
-func (p *watchProcessor) Process(client StoreClient) error {
+func (p *watchProcessor) Process(client BackendClient) error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {

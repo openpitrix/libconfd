@@ -82,7 +82,7 @@ func TestProcessTemplateResources(t *testing.T) {
 	}
 
 	os.Setenv("FOO", "bar")
-	storeClient, err := NewEnvClient()
+	storeClient, err := NewEnvBackendClient()
 	if err != nil {
 		t.Errorf("%v", err)
 	}
