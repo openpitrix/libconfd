@@ -93,14 +93,18 @@ func (p TemplateFunc) Cget(key string) (KVPair, error) {
 	}
 
 	kv, err := p.FuncMap["get"].(func(string) (KVPair, error))(key)
-	if err == nil {
-		var b []byte
-		b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
-		if err == nil {
-			kv.Value = string(b)
-		}
+	if err != nil {
+		return KVPair{}, err
 	}
-	return kv, err
+
+	var b []byte
+	b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
+	if err != nil {
+		return KVPair{}, err
+	}
+
+	kv.Value = string(b)
+	return kv, nil
 }
 
 func (p TemplateFunc) Cgets(pattern string) ([]KVPair, error) {
@@ -109,16 +113,18 @@ func (p TemplateFunc) Cgets(pattern string) ([]KVPair, error) {
 	}
 
 	kvs, err := p.FuncMap["gets"].(func(string) ([]KVPair, error))(pattern)
-	if err == nil {
-		for i := range kvs {
-			b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(p.PGPPrivateKey))
-			if err != nil {
-				return []KVPair(nil), err
-			}
-			kvs[i].Value = string(b)
-		}
+	if err != nil {
+		return nil, err
 	}
-	return kvs, err
+
+	for i := range kvs {
+		b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(p.PGPPrivateKey))
+		if err != nil {
+			return nil, err
+		}
+		kvs[i].Value = string(b)
+	}
+	return kvs, nil
 }
 
 func (p TemplateFunc) Cgetv(key string) (string, error) {
@@ -127,14 +133,17 @@ func (p TemplateFunc) Cgetv(key string) (string, error) {
 	}
 
 	v, err := p.FuncMap["getv"].(func(string, ...string) (string, error))(key)
-	if err == nil {
-		var b []byte
-		b, err = secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
-		if err == nil {
-			return string(b), nil
-		}
+	if err != nil {
+		return "", err
 	}
-	return v, err
+
+	var b []byte
+	b, err = secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), err
 }
 
 func (p TemplateFunc) Cgetvs(pattern string) ([]string, error) {
@@ -143,16 +152,18 @@ func (p TemplateFunc) Cgetvs(pattern string) ([]string, error) {
 	}
 
 	vs, err := p.FuncMap["getvs"].(func(string) ([]string, error))(pattern)
-	if err == nil {
-		for i := range vs {
-			b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(p.PGPPrivateKey))
-			if err != nil {
-				return []string(nil), err
-			}
-			vs[i] = string(b)
-		}
+	if err != nil {
+		return nil, err
 	}
-	return vs, err
+
+	for i := range vs {
+		b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(p.PGPPrivateKey))
+		if err != nil {
+			return nil, err
+		}
+		vs[i] = string(b)
+	}
+	return vs, nil
 }
 
 // ----------------------------------------------------------------------------
@@ -259,7 +270,7 @@ func (_ TemplateFunc) LookupIP(data string) []string {
 func (_ TemplateFunc) LookupSRV(service, proto, name string) []*net.SRV {
 	_, s, err := net.LookupSRV(service, proto, name)
 	if err != nil {
-		return []*net.SRV{}
+		return nil
 	}
 
 	sort.Slice(s, func(i, j int) bool {
