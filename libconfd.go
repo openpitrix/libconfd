@@ -10,7 +10,14 @@ import (
 	"syscall"
 )
 
-type Config struct {
+type BackendClient interface {
+	WatchEnabled() bool
+	GetValues(keys []string) (map[string]string, error)
+	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
+	Close() error
+}
+
+type ConfdConfig struct {
 	ConfDir       string
 	ConfigDir     string
 	KeepStageFile bool
@@ -21,26 +28,19 @@ type Config struct {
 	PGPPrivateKey []byte
 }
 
-type BackendClient interface {
-	WatchEnabled() bool
-	GetValues(keys []string) (map[string]string, error)
-	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
-	Close() error
-}
-
-type Options struct {
+type ConfdOptions struct {
 	Onetime  bool
 	Watch    bool
 	Interval int
 }
 
 type Confd struct {
-	cfg    Config
+	cfg    ConfdConfig
 	client BackendClient
-	opt    Options
+	opt    ConfdOptions
 }
 
-func New(cfg Config, client BackendClient, opt Options) *Confd {
+func New(cfg ConfdConfig, client BackendClient, opt ConfdOptions) *Confd {
 	return &Confd{
 		cfg:    cfg,
 		client: client,
