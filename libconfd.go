@@ -10,24 +10,6 @@ import (
 	"syscall"
 )
 
-type BackendClient interface {
-	WatchEnabled() bool
-	GetValues(keys []string) (map[string]string, error)
-	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
-	Close() error
-}
-
-type ConfdConfig struct {
-	ConfDir       string
-	ConfigDir     string
-	KeepStageFile bool
-	Noop          bool
-	Prefix        string
-	SyncOnly      bool
-	TemplateDir   string
-	PGPPrivateKey []byte
-}
-
 type ConfdOptions struct {
 	Onetime  bool
 	Watch    bool
@@ -35,16 +17,40 @@ type ConfdOptions struct {
 }
 
 type Confd struct {
-	cfg    ConfdConfig
+	cfg    Config
 	client BackendClient
 	opt    ConfdOptions
 }
 
-func New(cfg ConfdConfig, client BackendClient, opt ConfdOptions) *Confd {
+func New(cfg Config, client BackendClient, opt ConfdOptions) *Confd {
 	return &Confd{
 		cfg:    cfg,
 		client: client,
 		opt:    opt,
+	}
+}
+
+func NewOnetime(cfg Config, client BackendClient) *Confd {
+	return &Confd{
+		cfg:    cfg,
+		client: client,
+		opt:    ConfdOptions{Onetime: true},
+	}
+}
+
+func NewWatch(cfg Config, client BackendClient) *Confd {
+	return &Confd{
+		cfg:    cfg,
+		client: client,
+		opt:    ConfdOptions{Watch: true},
+	}
+}
+
+func NewInterval(cfg Config, client BackendClient, interval int) *Confd {
+	return &Confd{
+		cfg:    cfg,
+		client: client,
+		opt:    ConfdOptions{Interval: interval},
 	}
 }
 

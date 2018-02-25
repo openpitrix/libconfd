@@ -13,14 +13,14 @@ type Processor interface {
 	Process(client BackendClient) error
 }
 
-func NewOnetimeProcessor(cfg ConfdConfig) Processor {
+func NewOnetimeProcessor(cfg Config) Processor {
 	return &onetimeProcessor{
 		config: cfg,
 	}
 }
 
 type onetimeProcessor struct {
-	config ConfdConfig
+	config Config
 }
 
 func (p *onetimeProcessor) Process(client BackendClient) error {
@@ -44,14 +44,14 @@ func (p *onetimeProcessor) Process(client BackendClient) error {
 }
 
 type intervalProcessor struct {
-	config   ConfdConfig
+	config   Config
 	stopChan chan bool
 	doneChan chan bool
 	errChan  chan error
 	interval int
 }
 
-func NewIntervalProcessor(config ConfdConfig, stopChan, doneChan chan bool, errChan chan error, interval int) Processor {
+func NewIntervalProcessor(config Config, stopChan, doneChan chan bool, errChan chan error, interval int) Processor {
 	return &intervalProcessor{config, stopChan, doneChan, errChan, interval}
 }
 
@@ -80,14 +80,14 @@ func (p *intervalProcessor) Process(client BackendClient) error {
 }
 
 type watchProcessor struct {
-	config   ConfdConfig
+	config   Config
 	stopChan chan bool
 	doneChan chan bool
 	errChan  chan error
 	wg       sync.WaitGroup
 }
 
-func NewWatchProcessor(config ConfdConfig, stopChan, doneChan chan bool, errChan chan error) Processor {
+func NewWatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan error) Processor {
 	return &watchProcessor{
 		config:   config,
 		stopChan: stopChan,

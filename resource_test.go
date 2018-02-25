@@ -86,7 +86,7 @@ func TestProcessTemplateResources(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	c := ConfdConfig{
+	c := Config{
 		ConfDir:     tempConfDir,
 		ConfigDir:   filepath.Join(tempConfDir, "conf.d"),
 		TemplateDir: filepath.Join(tempConfDir, "templates"),
