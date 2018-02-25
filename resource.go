@@ -19,11 +19,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// TemplateResourceConfig holds the parsed template resource.
-type TemplateResourceConfig struct {
-	TemplateResource TemplateResource `toml:"template"`
-}
-
 // TemplateResource is the representation of a parsed template resource.
 type TemplateResource struct {
 	Src           string
@@ -87,6 +82,11 @@ func MakeTemplateResourceList(config Config, client StoreClient) ([]*TemplateRes
 
 // NewTemplateResource creates a TemplateResource.
 func NewTemplateResource(path string, config Config, client StoreClient) (*TemplateResource, error) {
+	// TemplateResourceConfig holds the parsed template resource.
+	type TemplateResourceConfig struct {
+		TemplateResource TemplateResource `toml:"template"`
+	}
+
 	// Set the default uid and gid so we can determine if it was
 	// unset from configuration.
 	tc := &TemplateResourceConfig{TemplateResource{Uid: -1, Gid: -1}}
