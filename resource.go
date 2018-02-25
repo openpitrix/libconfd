@@ -11,6 +11,10 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+type _TemplateResourceConfig struct {
+	TemplateResource TemplateResource `toml:"template"`
+}
+
 // TemplateResource is the representation of a parsed template resource.
 type TemplateResource struct {
 	Src           string
@@ -27,11 +31,7 @@ type TemplateResource struct {
 }
 
 func LoadTemplateResource(data string) (*TemplateResource, error) {
-	type TemplateResourceConfig struct {
-		TemplateResource TemplateResource `toml:"template"`
-	}
-
-	p := &TemplateResourceConfig{
+	p := &_TemplateResourceConfig{
 		TemplateResource: TemplateResource{
 			Gid: -1,
 			Uid: -1,
@@ -49,11 +49,7 @@ func LoadTemplateResource(data string) (*TemplateResource, error) {
 }
 
 func LoadTemplateResourceFile(name string) (*TemplateResource, error) {
-	type TemplateResourceConfig struct {
-		TemplateResource TemplateResource `toml:"template"`
-	}
-
-	p := &TemplateResourceConfig{
+	p := &_TemplateResourceConfig{
 		TemplateResource: TemplateResource{
 			Gid: -1,
 			Uid: -1,
@@ -71,11 +67,7 @@ func LoadTemplateResourceFile(name string) (*TemplateResource, error) {
 }
 
 func (p *TemplateResource) TomlString() string {
-	type TemplateResourceConfig struct {
-		TemplateResource TemplateResource `toml:"template"`
-	}
-
-	q := TemplateResourceConfig{
+	q := _TemplateResourceConfig{
 		TemplateResource: *p,
 	}
 
