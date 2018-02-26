@@ -7,18 +7,18 @@ package libconfd
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
-
-	"github.com/golang/glog"
+	"sync/atomic"
 )
 
 var logger Logger = NewStdLogger(os.Stderr)
 
 // NewStdLogger create new logger based on std log.
-// If defaultLevel missing, use WARNING as the default level.
-// Level: DEBUG < INFO < WARNING < ERROR < PANIC < FATAL
+// If defaultLevel missing, use WARN as the default level.
+// Level: DEBUG < INFO < WARN < ERROR < PANIC < FATAL
 func NewStdLogger(out io.Writer, defaultLevel ...string) Logger {
-	return new(glogger)
+	return newStdLogger(out, defaultLevel...)
 }
 
 func GetLogger() Logger {
@@ -31,94 +31,223 @@ func SetLogger(new Logger) (old Logger) {
 }
 
 type Logger interface {
-	Debug(args ...interface{})
-	Debugln(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Info(args ...interface{})
-	Infoln(args ...interface{})
-	Infof(format string, args ...interface{})
-	Warning(args ...interface{})
-	Warningln(args ...interface{})
-	Warningf(format string, args ...interface{})
-	Error(args ...interface{})
-	Errorln(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Panic(args ...interface{})
-	Panicln(args ...interface{})
-	Panicf(format string, args ...interface{})
-	Fatal(args ...interface{})
-	Fatalln(args ...interface{})
-	Fatalf(format string, args ...interface{})
+	Debug(v ...interface{})
+	Debugln(v ...interface{})
+	Debugf(format string, v ...interface{})
+	Info(v ...interface{})
+	Infoln(v ...interface{})
+	Infof(format string, v ...interface{})
+	Warning(v ...interface{})
+	Warningln(v ...interface{})
+	Warningf(format string, v ...interface{})
+	Error(v ...interface{})
+	Errorln(v ...interface{})
+	Errorf(format string, v ...interface{})
+	Panic(v ...interface{})
+	Panicln(v ...interface{})
+	Panicf(format string, v ...interface{})
+	Fatal(v ...interface{})
+	Fatalln(v ...interface{})
+	Fatalf(format string, v ...interface{})
 
-	// Level: DEBUG < INFO < WARNING < ERROR < PANIC < FATAL
+	// Level: DEBUG < INFO < WARN < ERROR < PANIC < FATAL
 	GetLevel() string
 	SetLevel(new string) (old string)
-
-	// V reports whether verbosity level l is at least the requested verbose level.
-	//V(l int) bool
 }
 
-type glogger struct{}
+type logLevelType uint32
 
-func (_ *glogger) Debug(args ...interface{})                 {}
-func (_ *glogger) Debugln(args ...interface{})               {}
-func (_ *glogger) Debugf(format string, args ...interface{}) {}
+const (
+	logUnknownLevel logLevelType = iota // invalid
+	logDebugLevel
+	logInfoLevel
+	logWarnLevel
+	logErrorLevel
+	logPanicLevel
+	logFatalLevel
+)
 
-func (_ *glogger) Panic(args ...interface{})                 {}
-func (_ *glogger) Panicln(args ...interface{})               {}
-func (_ *glogger) Panicf(format string, args ...interface{}) {}
-
-func (_ *glogger) GetLevel() string                 { return "" }
-func (_ *glogger) SetLevel(new string) (old string) { return "" }
-
-func (_ *glogger) Info(args ...interface{}) {
-	glog.InfoDepth(1, args...)
+func (level logLevelType) Valid() bool {
+	return level >= logDebugLevel && level <= logFatalLevel
 }
 
-func (_ *glogger) Infoln(args ...interface{}) {
-	glog.InfoDepth(1, fmt.Sprintln(args...))
+func newLogLevel(name string) logLevelType {
+	switch name {
+	case "DEBUG":
+		return logDebugLevel
+	case "INFO":
+		return logInfoLevel
+	case "WARN":
+		return logWarnLevel
+	case "ERROR":
+		return logErrorLevel
+	case "PANIC":
+		return logPanicLevel
+	case "FATAL":
+		return logFatalLevel
+	}
+	return logUnknownLevel
 }
 
-func (_ *glogger) Infof(format string, args ...interface{}) {
-	glog.InfoDepth(1, fmt.Sprintf(format, args...))
+func (level logLevelType) String() string {
+	switch level {
+	case logDebugLevel:
+		return "DEBUG"
+	case logInfoLevel:
+		return "INFO"
+	case logWarnLevel:
+		return "WARN"
+	case logErrorLevel:
+		return "ERROR"
+	case logPanicLevel:
+		return "PANIC"
+	case logFatalLevel:
+		return "FATAL"
+	}
+	return "INVALID"
 }
 
-func (_ *glogger) Warning(args ...interface{}) {
-	glog.WarningDepth(1, args...)
+type stdLogger struct {
+	level logLevelType
+	*log.Logger
 }
 
-func (_ *glogger) Warningln(args ...interface{}) {
-	glog.WarningDepth(1, fmt.Sprintln(args...))
+func newStdLogger(out io.Writer, defaultLevel ...string) *stdLogger {
+	var level = logWarnLevel
+	if len(defaultLevel) > 0 {
+		level = newLogLevel(defaultLevel[0])
+		if !level.Valid() {
+			panic("invalid level: " + defaultLevel[0])
+		}
+	}
+
+	l := log.New(out, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
+	return &stdLogger{level: level, Logger: l}
 }
 
-func (_ *glogger) Warningf(format string, args ...interface{}) {
-	glog.WarningDepth(1, fmt.Sprintf(format, args...))
+func (p *stdLogger) getLevel() logLevelType {
+	return logLevelType(atomic.LoadUint32((*uint32)(&p.level)))
+}
+func (p *stdLogger) setLevel(level logLevelType) logLevelType {
+	return logLevelType(atomic.SwapUint32((*uint32)(&p.level), uint32(level)))
 }
 
-func (_ *glogger) Error(args ...interface{}) {
-	glog.ErrorDepth(1, args...)
+func (p *stdLogger) getLevelName() string {
+	return p.getLevel().String()
+}
+func (p *stdLogger) setLevelByName(levelName string) string {
+	level := newLogLevel(levelName)
+	if !level.Valid() {
+		panic("invalid level: " + levelName)
+	}
+	return p.setLevel(level).String()
 }
 
-func (_ *glogger) Errorln(args ...interface{}) {
-	glog.ErrorDepth(1, fmt.Sprintln(args...))
+func (p *stdLogger) GetLevel() string {
+	return p.getLevel().String()
+}
+func (p *stdLogger) SetLevel(new string) (old string) {
+	return p.setLevelByName(new)
 }
 
-func (_ *glogger) Errorf(format string, args ...interface{}) {
-	glog.ErrorDepth(1, fmt.Sprintf(format, args...))
+func (p *stdLogger) Debug(v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	}
+}
+func (p *stdLogger) Debugln(v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	}
+}
+func (p *stdLogger) Debugf(format string, v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	}
 }
 
-func (_ *glogger) Fatal(args ...interface{}) {
-	glog.FatalDepth(1, args...)
+func (p *stdLogger) Info(v ...interface{}) {
+	if l := logInfoLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	}
+}
+func (p *stdLogger) Infoln(v ...interface{}) {
+	if l := logInfoLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	}
+}
+func (p *stdLogger) Infof(format string, v ...interface{}) {
+	if l := logInfoLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	}
 }
 
-func (_ *glogger) Fatalln(args ...interface{}) {
-	glog.FatalDepth(1, fmt.Sprintln(args...))
+func (p *stdLogger) Warning(v ...interface{}) {
+	if l := logWarnLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	}
+}
+func (p *stdLogger) Warningln(v ...interface{}) {
+	if l := logWarnLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	}
+}
+func (p *stdLogger) Warningf(format string, v ...interface{}) {
+	if l := logWarnLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	}
 }
 
-func (_ *glogger) Fatalf(format string, args ...interface{}) {
-	glog.FatalDepth(1, fmt.Sprintf(format, args...))
+func (p *stdLogger) Error(v ...interface{}) {
+	if l := logErrorLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	}
+}
+func (p *stdLogger) Errorln(v ...interface{}) {
+	if l := logErrorLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	}
+}
+func (p *stdLogger) Errorf(format string, v ...interface{}) {
+	if l := logErrorLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	}
 }
 
-func (_ *glogger) V(l int) bool {
-	return bool(glog.V(glog.Level(l)))
+func (p *stdLogger) Panic(v ...interface{}) {
+	s := fmt.Sprint(v...)
+	if l := logPanicLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+s)
+	}
+	panic(s)
+}
+func (p *stdLogger) Panicln(v ...interface{}) {
+	s := fmt.Sprintln(v...)
+	if l := logPanicLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+s)
+	}
+	panic(s)
+}
+func (p *stdLogger) Panicf(format string, v ...interface{}) {
+	s := fmt.Sprintf(format, v...)
+	if l := logPanicLevel; p.getLevel() <= l {
+		p.Output(2, "["+l.String()+"] "+s)
+	}
+	panic(s)
+}
+
+func (p *stdLogger) Fatal(v ...interface{}) {
+	const l = logFatalLevel
+	p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	os.Exit(1)
+}
+func (p *stdLogger) Fatalln(v ...interface{}) {
+	const l = logFatalLevel
+	p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	os.Exit(1)
+}
+func (p *stdLogger) Fatalf(format string, v ...interface{}) {
+	const l = logFatalLevel
+	p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	os.Exit(1)
 }
