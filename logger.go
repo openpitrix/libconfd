@@ -6,14 +6,23 @@ package libconfd
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/golang/glog"
 )
 
-var logger Logger = new(glogger)
+var logger Logger = NewStdLogger(os.Stderr)
 
-func NewGlogger() Logger {
+// NewStdLogger create new logger based on std log.
+// If defaultLevel missing, use WARNING as the default level.
+// Level: DEBUG < INFO < WARNING < ERROR < PANIC < FATAL
+func NewStdLogger(out io.Writer, defaultLevel ...string) Logger {
 	return new(glogger)
+}
+
+func GetLogger() Logger {
+	return logger
 }
 
 func SetLogger(new Logger) (old Logger) {
@@ -22,6 +31,9 @@ func SetLogger(new Logger) (old Logger) {
 }
 
 type Logger interface {
+	Debug(args ...interface{})
+	Debugln(args ...interface{})
+	Debugf(format string, args ...interface{})
 	Info(args ...interface{})
 	Infoln(args ...interface{})
 	Infof(format string, args ...interface{})
@@ -31,15 +43,33 @@ type Logger interface {
 	Error(args ...interface{})
 	Errorln(args ...interface{})
 	Errorf(format string, args ...interface{})
+	Panic(args ...interface{})
+	Panicln(args ...interface{})
+	Panicf(format string, args ...interface{})
 	Fatal(args ...interface{})
 	Fatalln(args ...interface{})
 	Fatalf(format string, args ...interface{})
 
+	// Level: DEBUG < INFO < WARNING < ERROR < PANIC < FATAL
+	GetLevel() string
+	SetLevel(new string) (old string)
+
 	// V reports whether verbosity level l is at least the requested verbose level.
-	V(l int) bool
+	//V(l int) bool
 }
 
 type glogger struct{}
+
+func (_ *glogger) Debug(args ...interface{})                 {}
+func (_ *glogger) Debugln(args ...interface{})               {}
+func (_ *glogger) Debugf(format string, args ...interface{}) {}
+
+func (_ *glogger) Panic(args ...interface{})                 {}
+func (_ *glogger) Panicln(args ...interface{})               {}
+func (_ *glogger) Panicf(format string, args ...interface{}) {}
+
+func (_ *glogger) GetLevel() string                 { return "" }
+func (_ *glogger) SetLevel(new string) (old string) { return "" }
 
 func (_ *glogger) Info(args ...interface{}) {
 	glog.InfoDepth(1, args...)

@@ -4,13 +4,14 @@
 
 package libconfd
 
-func ExampleLogger() {
-	var logger Logger = NewGlogger()
+import (
+	"os"
+)
 
+func ExampleLogger() {
+	var logger Logger = NewStdLogger(os.Stderr)
+
+	logger.Debug("debug: ...")
 	logger.Info("hello")
 	logger.Warning("confd")
-
-	if logger.V(1) {
-		logger.Info("debug: ...")
-	}
 }

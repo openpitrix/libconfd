@@ -58,9 +58,7 @@ func (_ *_EnvClient) GetValues(keys []string) (map[string]string, error) {
 		}
 	}
 
-	if logger.V(1) {
-		logger.Infof("Key Map: %#v", vars)
-	}
+	logger.Debugf("Key Map: %#v", vars)
 	return vars, nil
 }
 

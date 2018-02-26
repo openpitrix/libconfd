@@ -5,10 +5,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/chai2010/libconfd"
 )
 
-var logger libconfd.Logger = libconfd.NewGlogger()
+var logger libconfd.Logger = libconfd.NewStdLogger(os.Stderr)
 
 func SetLogger(l libconfd.Logger) {
 	logger = l

@@ -38,9 +38,7 @@ func MakeAllTemplateResourceProcessor(
 ) {
 	var lastError error
 	templates := make([]*TemplateResourceProcessor, 0)
-	if logger.V(1) {
-		logger.Info("Loading template resources from confdir " + config.ConfDir)
-	}
+	logger.Debug("Loading template resources from confdir " + config.ConfDir)
 	if !utilFileExist(config.ConfDir) {
 		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
 		return nil, nil
@@ -55,9 +53,7 @@ func MakeAllTemplateResourceProcessor(
 	}
 
 	for _, p := range paths {
-		if logger.V(1) {
-			logger.Infof("Found template: %s", p)
-		}
+		logger.Debugf("Found template: %s", p)
 		t, err := NewTemplateResourceProcessor(p, config, client)
 		if err != nil {
 			lastError = err
@@ -75,9 +71,7 @@ func NewTemplateResourceProcessor(
 	*TemplateResourceProcessor,
 	error,
 ) {
-	if logger.V(1) {
-		logger.Info("Loading template resource from " + path)
-	}
+	logger.Debug("Loading template resource from " + path)
 
 	res, err := LoadTemplateResourceFile(path)
 	if err != nil {
@@ -126,17 +120,13 @@ func NewTemplateResourceProcessor(
 // setVars sets the Vars for template resource.
 func (t *TemplateResourceProcessor) SetVars() error {
 	var err error
-	if logger.V(1) {
-		logger.Info("Retrieving keys from store")
-		logger.Info("Key prefix set to " + t.Prefix)
-	}
+	logger.Debug("Retrieving keys from store")
+	logger.Debug("Key prefix set to " + t.Prefix)
 	result, err := t.storeClient.GetValues(utilAppendPrefix(t.Prefix, t.Keys))
 	if err != nil {
 		return err
 	}
-	if logger.V(1) {
-		logger.Info("Got the following map from store: %v", result)
-	}
+	logger.Debug("Got the following map from store: %v", result)
 	t.store.Purge()
 
 	for k, v := range result {
@@ -150,16 +140,12 @@ func (t *TemplateResourceProcessor) SetVars() error {
 // StageFile for the template resource.
 // It returns an error if any.
 func (t *TemplateResourceProcessor) CreateStageFile() error {
-	if logger.V(1) {
-		logger.Info("Using source template " + t.Src)
-	}
+	logger.Debug("Using source template " + t.Src)
 	if !utilFileExist(t.Src) {
 		return errors.New("Missing template: " + t.Src)
 	}
 
-	if logger.V(1) {
-		logger.Info("Compiling source template " + t.Src)
-	}
+	logger.Debug("Compiling source template " + t.Src)
 	tmpl, err := template.New(filepath.Base(t.Src)).Funcs(template.FuncMap(t.funcMap)).ParseFiles(t.Src)
 	if err != nil {
 		return fmt.Errorf("Unable to process template %s, %s", t.Src, err)
@@ -199,9 +185,7 @@ func (t *TemplateResourceProcessor) Sync() error {
 		defer os.Remove(staged)
 	}
 
-	if logger.V(1) {
-		logger.Info("Comparing candidate config to " + t.Dest)
-	}
+	logger.Debug("Comparing candidate config to " + t.Dest)
 	ok, err := utilSameConfig(staged, t.Dest)
 	if err != nil {
 		logger.Error(err)
@@ -217,18 +201,14 @@ func (t *TemplateResourceProcessor) Sync() error {
 				return fmt.Errorf("Config check failed: %v", err)
 			}
 		}
-		if logger.V(1) {
-			logger.Info("Overwriting target config " + t.Dest)
-		}
+		logger.Debug("Overwriting target config " + t.Dest)
 		err := os.Rename(staged, t.Dest)
 		if err != nil {
 			if notDeviceOrResourceBusyError(err) {
 				return err
 			}
 
-			if logger.V(1) {
-				logger.Info("Rename failed - target is likely a mount. Trying to write instead")
-			}
+			logger.Debug("Rename failed - target is likely a mount. Trying to write instead")
 			// try to open the file and write to it
 			var contents []byte
 			var rerr error
@@ -250,9 +230,7 @@ func (t *TemplateResourceProcessor) Sync() error {
 		}
 		logger.Info("Target config " + t.Dest + " has been updated")
 	} else {
-		if logger.V(1) {
-			logger.Info("Target config " + t.Dest + " in sync")
-		}
+		logger.Debug("Target config " + t.Dest + " in sync")
 	}
 	return nil
 }

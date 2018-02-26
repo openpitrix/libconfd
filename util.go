@@ -94,9 +94,7 @@ func utilRecursiveFindFiles(root string, pattern string) (files []string, err er
 // It returns nil if the given cmd returns 0.
 // The command can be run on unix and windows.
 func utilRunCommand(cmd string) error {
-	if logger.V(1) {
-		logger.Info("Running " + cmd)
-	}
+	logger.Debug("Running " + cmd)
 	var c *exec.Cmd
 	if runtime.GOOS == "windows" {
 		c = exec.Command("cmd", "/C", cmd)
@@ -109,8 +107,6 @@ func utilRunCommand(cmd string) error {
 		logger.Error(fmt.Sprintf("%q", string(output)))
 		return err
 	}
-	if logger.V(1) {
-		logger.Infof("%q", string(output))
-	}
+	logger.Debugf("%q", string(output))
 	return nil
 }
