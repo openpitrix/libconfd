@@ -5,25 +5,39 @@
 package libconfd
 
 import (
+	"context"
 	"sync"
 	"time"
 )
 
-type Processor interface {
-	Process(client BackendClient) error
+type RunOptions struct {
+	OnCheckCmdDone  func()
+	OnReloadCmdDone func()
 }
 
-func NewOnetimeProcessor(cfg Config) Processor {
-	return &onetimeProcessor{
+type Processor struct {
+	config   Config
+	stopChan chan bool
+	doneChan chan bool
+	errChan  chan error
+	interval int
+	wg       sync.WaitGroup
+}
+
+func NewProcessor(cfg Config) *Processor {
+	return &Processor{
 		config: cfg,
 	}
 }
 
-type onetimeProcessor struct {
-	config Config
+func NewIntervalProcessor(cfg Config, interval int) *Processor {
+	return &Processor{
+		config:   cfg,
+		interval: interval,
+	}
 }
 
-func (p *onetimeProcessor) Process(client BackendClient) error {
+func (p *Processor) RunOnce(ctx context.Context, client BackendClient, opt *RunOptions) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
 		return err
@@ -43,19 +57,7 @@ func (p *onetimeProcessor) Process(client BackendClient) error {
 	return nil
 }
 
-type intervalProcessor struct {
-	config   Config
-	stopChan chan bool
-	doneChan chan bool
-	errChan  chan error
-	interval int
-}
-
-func NewIntervalProcessor(config Config, stopChan, doneChan chan bool, errChan chan error, interval int) Processor {
-	return &intervalProcessor{config, stopChan, doneChan, errChan, interval}
-}
-
-func (p *intervalProcessor) Process(client BackendClient) error {
+func (p *Processor) RunInIntervalMode(ctx context.Context, client BackendClient, opt *RunOptions) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
@@ -79,24 +81,7 @@ func (p *intervalProcessor) Process(client BackendClient) error {
 	}
 }
 
-type watchProcessor struct {
-	config   Config
-	stopChan chan bool
-	doneChan chan bool
-	errChan  chan error
-	wg       sync.WaitGroup
-}
-
-func NewWatchProcessor(config Config, stopChan, doneChan chan bool, errChan chan error) Processor {
-	return &watchProcessor{
-		config:   config,
-		stopChan: stopChan,
-		doneChan: doneChan,
-		errChan:  errChan,
-	}
-}
-
-func (p *watchProcessor) Process(client BackendClient) error {
+func (p *Processor) RunInWatchMode(ctx context.Context, client BackendClient, opt *RunOptions) error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
@@ -112,7 +97,7 @@ func (p *watchProcessor) Process(client BackendClient) error {
 	return nil
 }
 
-func (p *watchProcessor) monitorPrefix(t *TemplateResourceProcessor) {
+func (p *Processor) monitorPrefix(t *TemplateResourceProcessor) {
 	defer p.wg.Done()
 	keys := utilAppendPrefix(t.Prefix, t.Keys)
 	for {

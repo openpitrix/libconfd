@@ -2,6 +2,8 @@
 // Use of this source code is governed by a Apache-style
 // license that can be found in the LICENSE file.
 
+// +build ignore
+
 package libconfd
 
 import (
@@ -69,7 +71,7 @@ func (p *Confd) Run() {
 	doneChan := make(chan bool)
 	errChan := make(chan error, 10)
 
-	var processor Processor
+	var processor _Processor
 	switch {
 	case p.opt.Watch:
 		processor = NewWatchProcessor(p.cfg, stopChan, doneChan, errChan)
