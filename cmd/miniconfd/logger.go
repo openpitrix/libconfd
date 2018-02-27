@@ -10,7 +10,7 @@ import (
 	"github.com/chai2010/libconfd"
 )
 
-var logger libconfd.Logger = libconfd.NewStdLogger(os.Stderr)
+var logger libconfd.Logger = libconfd.NewStdLogger(os.Stderr, "", "", 0)
 
 func SetLogger(l libconfd.Logger) {
 	logger = l

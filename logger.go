@@ -14,13 +14,14 @@ import (
 	"sync/atomic"
 )
 
-var logger Logger = NewStdLogger(os.Stderr)
+var logger Logger = NewStdLogger(os.Stderr, "", "", 0)
 
 // NewStdLogger create new logger based on std log.
-// If defaultLevel missing, use WARN as the default level.
+// If level is empty string, use WARN as the default level.
+// If flag is zore, use 'log.LstdFlags|log.Lshortfile' as the default flag.
 // Level: DEBUG < INFO < WARN < ERROR < PANIC < FATAL
-func NewStdLogger(out io.Writer, defaultLevel ...string) Logger {
-	return newStdLogger(out, defaultLevel...)
+func NewStdLogger(out io.Writer, prefix, level string, flag int) Logger {
+	return newStdLogger(out, prefix, level, flag)
 }
 
 func GetLogger() Logger {
@@ -32,6 +33,9 @@ func SetLogger(new Logger) (old Logger) {
 	return
 }
 
+// Logger interface
+//
+// See https://github.com/chai2010/logger
 type Logger interface {
 	Debug(v ...interface{})
 	Debugln(v ...interface{})
@@ -114,17 +118,17 @@ type stdLogger struct {
 	*log.Logger
 }
 
-func newStdLogger(out io.Writer, defaultLevel ...string) *stdLogger {
-	var level = logWarnLevel
-	if len(defaultLevel) > 0 {
-		level = newLogLevel(defaultLevel[0])
-		if !level.Valid() {
-			panic("invalid level: " + defaultLevel[0])
-		}
+func newStdLogger(out io.Writer, prefix, level string, flag int) *stdLogger {
+	if flag == 0 {
+		flag = log.LstdFlags | log.Lshortfile
+	}
+	if level == "" {
+		level = "WARN"
 	}
 
-	l := log.New(out, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
-	return &stdLogger{level: level, Logger: l}
+	p := &stdLogger{Logger: log.New(out, prefix, flag)}
+	p.SetLevel(level)
+	return p
 }
 
 func (p *stdLogger) getLevel() logLevelType {
