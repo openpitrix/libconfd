@@ -7,6 +7,7 @@ package libconfd
 import (
 	"context"
 	"sync"
+	"text/template"
 	"time"
 )
 
@@ -23,7 +24,7 @@ type Processor struct {
 	wg       sync.WaitGroup
 }
 
-func NewProcessor(cfg Config) *Processor {
+func NewProcessor(cfg Config, userTemplateFuncs template.FuncMap) *Processor {
 	return &Processor{
 		config: cfg,
 	}
