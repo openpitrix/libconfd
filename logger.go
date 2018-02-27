@@ -2,6 +2,8 @@
 // Use of this source code is governed by a Apache-style
 // license that can be found in the LICENSE file.
 
+// copy from https://github.com/chai2010/logger
+
 package libconfd
 
 import (
