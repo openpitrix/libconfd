@@ -5,8 +5,7 @@
 package libconfd
 
 type Client interface {
-	WatchEnabled() bool
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
-	Close() error
+	WatchEnabled() bool
 }
