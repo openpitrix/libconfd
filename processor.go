@@ -20,7 +20,6 @@ type Processor struct {
 	stopChan chan bool
 	doneChan chan bool
 	errChan  chan error
-	interval int
 	wg       sync.WaitGroup
 }
 
@@ -50,7 +49,7 @@ func (p *Processor) RunOnce(ctx context.Context, client Client, opt *RunOptions)
 	return nil
 }
 
-func (p *Processor) RunInIntervalMode(ctx context.Context, client Client, interval int, opt *RunOptions) error {
+func (p *Processor) RunInIntervalMode(ctx context.Context, client Client, interval time.Duration, opt *RunOptions) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
@@ -68,7 +67,7 @@ func (p *Processor) RunInIntervalMode(ctx context.Context, client Client, interv
 		select {
 		case <-p.stopChan:
 			break
-		case <-time.After(time.Duration(p.interval) * time.Second):
+		case <-time.After(interval):
 			continue
 		}
 	}
