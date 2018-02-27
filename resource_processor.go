@@ -26,12 +26,12 @@ type TemplateResourceProcessor struct {
 	keepStageFile bool
 	noop          bool
 	store         *KVStore
-	storeClient   BackendClient
+	storeClient   Client
 	syncOnly      bool
 }
 
 func MakeAllTemplateResourceProcessor(
-	config Config, client BackendClient,
+	config Config, client Client,
 ) (
 	[]*TemplateResourceProcessor,
 	error,
@@ -66,7 +66,7 @@ func MakeAllTemplateResourceProcessor(
 
 // NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
 func NewTemplateResourceProcessor(
-	path string, config Config, client BackendClient,
+	path string, config Config, client Client,
 ) (
 	*TemplateResourceProcessor,
 	error,

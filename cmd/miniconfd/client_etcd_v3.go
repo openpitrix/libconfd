@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	_ libconfd.BackendClient = (*EtcdClient)(nil)
+	_ libconfd.Client = (*EtcdClient)(nil)
 )
 
 type EtcdOptions struct {
