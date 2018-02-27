@@ -30,13 +30,6 @@ func NewProcessor(cfg Config) *Processor {
 	}
 }
 
-func NewIntervalProcessor(cfg Config, interval int) *Processor {
-	return &Processor{
-		config:   cfg,
-		interval: interval,
-	}
-}
-
 func (p *Processor) RunOnce(ctx context.Context, client Client, opt *RunOptions) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
 	if err != nil {
@@ -57,7 +50,7 @@ func (p *Processor) RunOnce(ctx context.Context, client Client, opt *RunOptions)
 	return nil
 }
 
-func (p *Processor) RunInIntervalMode(ctx context.Context, client Client, opt *RunOptions) error {
+func (p *Processor) RunInIntervalMode(ctx context.Context, client Client, interval int, opt *RunOptions) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
