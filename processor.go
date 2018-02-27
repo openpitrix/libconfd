@@ -11,30 +11,39 @@ import (
 	"time"
 )
 
-type RunOptions struct {
-	OnCheckCmdDone  func()
-	OnReloadCmdDone func()
+type runOptions struct{}
+
+type RunOptions func(*runOptions)
+
+func WithInterval(interval time.Duration) RunOptions {
+	return nil
+}
+
+func WithCheckCmdDone(fn func(name, cmd string, err error)) RunOptions {
+	return nil
+}
+
+func WithReloadCmdDone(fn func(name, cmd string, err error)) RunOptions {
+	return nil
 }
 
 type Processor struct {
 	config   Config
+	client   Client
 	stopChan chan bool
 	doneChan chan bool
 	errChan  chan error
 	wg       sync.WaitGroup
 }
 
-func NewProcessor(cfg Config, userTemplateFuncs template.FuncMap) *Processor {
+func NewProcessor(cfg Config, client Client, funcs template.FuncMap) *Processor {
 	return &Processor{
 		config: cfg,
 	}
 }
 
-func (p *Processor) RunOnce(
-	ctx context.Context, client Client,
-	opt *RunOptions,
-) error {
-	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
+func (p *Processor) RunOnce(ctx context.Context, opts ...RunOptions) error {
+	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
 	}
@@ -53,13 +62,10 @@ func (p *Processor) RunOnce(
 	return nil
 }
 
-func (p *Processor) RunInIntervalMode(
-	ctx context.Context, client Client, interval time.Duration,
-	opt *RunOptions,
-) error {
+func (p *Processor) RunInIntervalMode(ctx context.Context, opts ...RunOptions) error {
 	defer close(p.doneChan)
 	for {
-		ts, err := MakeAllTemplateResourceProcessor(p.config, client)
+		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 		if err != nil {
 			logger.Warning(err)
 			return err
@@ -74,18 +80,15 @@ func (p *Processor) RunInIntervalMode(
 		select {
 		case <-p.stopChan:
 			break
-		case <-time.After(interval):
+		case <-time.After(time.Second):
 			continue
 		}
 	}
 }
 
-func (p *Processor) RunInWatchMode(
-	ctx context.Context, client Client,
-	opt *RunOptions,
-) error {
+func (p *Processor) RunInWatchMode(ctx context.Context, opts ...RunOptions) error {
 	defer close(p.doneChan)
-	ts, err := MakeAllTemplateResourceProcessor(p.config, client)
+	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		logger.Warning(err)
 		return err
