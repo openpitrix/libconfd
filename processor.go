@@ -56,7 +56,7 @@ type Processor struct {
 
 func NewProcessor(cfg Config, client Client) *Processor {
 	return &Processor{
-		config: cfg,
+		config: cfg.Clone(),
 	}
 }
 
