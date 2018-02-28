@@ -14,12 +14,12 @@ package main
 
 import (
 	"github.com/chai2010/libconfd"
-	"github.com/chai2010/libconfd/backends/env"
+	"github.com/chai2010/libconfd/backends/etcd"
 )
 
 func main() {
 	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-	client := env.NewEnvClient()
+	client := etcd.NewEtcdClient()
 
 	libconfd.NewProcessor(cfg, client).Run()
 }
