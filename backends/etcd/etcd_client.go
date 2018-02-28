@@ -19,7 +19,7 @@ import (
 
 var logger = libconfd.GetLogger()
 
-type EtcdOptions struct {
+type etcdOptions struct {
 	BasicAuth bool
 	UserName  string
 	Password  string
@@ -28,12 +28,29 @@ type EtcdOptions struct {
 	Key       string
 }
 
+type EtcdOptions func(*etcdOptions)
+
+func WitchMachines() EtcdOptions {
+	return nil
+}
+
+func WitchBasicAuth(userName, password string) EtcdOptions {
+	return nil
+}
+
+func WitchCACert(caCert, cert, key string) EtcdOptions {
+	return nil
+}
+
 // _EtcdClient is a wrapper around the etcd client
 type _EtcdClient struct {
 	cfg clientv3.Config
 }
 
-func NewEtcdClient(machines []string, opt *EtcdOptions) (libconfd.Client, error) {
+func NewEtcdClient(opts ...EtcdOptions) (libconfd.Client, error) {
+	var machines []string
+	var opt *etcdOptions
+
 	cfg := clientv3.Config{
 		Endpoints:            machines,
 		DialTimeout:          5 * time.Second,
