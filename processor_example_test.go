@@ -6,11 +6,12 @@ package libconfd_test
 
 import (
 	"github.com/chai2010/libconfd"
+	"github.com/chai2010/libconfd/backends/env"
 )
 
 func Example() {
 	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-	client := libconfd.NewEnvClient()
+	client := env.NewEnvClient()
 
 	libconfd.NewProcessor(cfg, client).Run()
 }

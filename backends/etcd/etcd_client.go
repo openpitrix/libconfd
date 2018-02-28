@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE-confd file.
 
-package main
+package etcd
 
 import (
 	"context"
@@ -16,9 +16,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 )
 
-var (
-	_ libconfd.Client = (*EtcdClient)(nil)
-)
+var logger = libconfd.GetLogger()
 
 type EtcdOptions struct {
 	BasicAuth bool
@@ -29,13 +27,12 @@ type EtcdOptions struct {
 	Key       string
 }
 
-// EtcdClient is a wrapper around the etcd client
-type EtcdClient struct {
+// _EtcdClient is a wrapper around the etcd client
+type _EtcdClient struct {
 	cfg clientv3.Config
 }
 
-// NewEtcdClient returns an *etcd.Client with a connection to named machines.
-func NewEtcdClient(machines []string, opt *EtcdOptions) (*EtcdClient, error) {
+func NewEtcdClient(machines []string, opt *EtcdOptions) (libconfd.Client, error) {
 	cfg := clientv3.Config{
 		Endpoints:            machines,
 		DialTimeout:          5 * time.Second,
@@ -81,19 +78,15 @@ func NewEtcdClient(machines []string, opt *EtcdOptions) (*EtcdClient, error) {
 		cfg.TLS = tlsConfig
 	}
 
-	return &EtcdClient{cfg}, nil
+	return &_EtcdClient{cfg}, nil
 }
 
-func (c *EtcdClient) Close() error {
-	return nil
-}
-
-func (c *EtcdClient) WatchEnabled() bool {
+func (c *_EtcdClient) WatchEnabled() bool {
 	return true
 }
 
 // GetValues queries etcd for keys prefixed by prefix.
-func (c *EtcdClient) GetValues(keys []string) (map[string]string, error) {
+func (c *_EtcdClient) GetValues(keys []string) (map[string]string, error) {
 	vars := make(map[string]string)
 
 	client, err := clientv3.New(c.cfg)
@@ -116,7 +109,7 @@ func (c *EtcdClient) GetValues(keys []string) (map[string]string, error) {
 	return vars, nil
 }
 
-func (c *EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
+func (c *_EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	var err error
 
 	// return something > 0 to trigger a key retrieval from the store

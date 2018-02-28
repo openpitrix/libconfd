@@ -9,6 +9,8 @@ import (
 	"fmt"
 
 	_ "github.com/chai2010/libconfd"
+	_ "github.com/chai2010/libconfd/backends/env"
+	_ "github.com/chai2010/libconfd/backends/etcd"
 )
 
 func main() {

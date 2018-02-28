@@ -2,23 +2,23 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE-confd file.
 
-package libconfd
+package env
 
 import (
 	"os"
 	"strings"
+
+	"github.com/chai2010/libconfd"
 )
+
+var logger = libconfd.GetLogger()
 
 // _EnvClient provides a shell for the env client
 type _EnvClient struct{}
 
 // NewEnvClient returns a new client
-func NewEnvClient() Client {
+func NewEnvClient() libconfd.Client {
 	return new(_EnvClient)
-}
-
-func (_ *_EnvClient) Close() error {
-	return nil
 }
 
 func (_ *_EnvClient) WatchEnabled() bool {
