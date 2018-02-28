@@ -5,6 +5,7 @@
 package libconfd
 
 import (
+	"fmt"
 	"path"
 	"sort"
 	"strings"
@@ -14,6 +15,10 @@ import (
 type KVPair struct {
 	Key   string
 	Value string
+}
+
+func (p KVPair) String() {
+	fmt.Sprintf("KVPair{%q:%q}", p.Key, p.Value)
 }
 
 // A KVStore represents an in-memory key-value store safe for
