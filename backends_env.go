@@ -12,9 +12,9 @@ import (
 // _EnvClient provides a shell for the env client
 type _EnvClient struct{}
 
-// NewEnvClient returns a new client
-func NewEnvBackendClient() (Client, error) {
-	return new(_EnvClient), nil
+// NewEnvBackendClient returns a new client
+func NewEnvBackendClient() Client {
+	return new(_EnvClient)
 }
 
 func (_ *_EnvClient) Close() error {
