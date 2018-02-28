@@ -2,16 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE-memkv file.
 
-package libconfd_test
+package libconfd
 
-import (
-	"github.com/chai2010/libconfd"
-	"github.com/chai2010/libconfd/backends/env"
-)
+func _Example() {
+	cfg := MustLoadConfig("~/.confd/config.toml")
+	client := tNewEnvClient()
 
-func Example() {
-	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-	client := env.NewEnvClient()
-
-	libconfd.NewProcessor(cfg, client).Run()
+	NewProcessor(cfg, client).Run()
 }

@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-func ExampleKVStore() {
+func _ExampleKVStore() {
 	s := NewKVStore()
 
 	s.Set("/myapp/database/username", "admin")
