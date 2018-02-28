@@ -2,6 +2,7 @@
 // Use of this source code is governed by a Apache-style
 // license that can be found in the LICENSE file.
 
+// mini confd, only support env/etcd backends.
 package main
 
 import (
