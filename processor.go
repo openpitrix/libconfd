@@ -11,19 +11,37 @@ import (
 	"time"
 )
 
-type runOptions struct{}
+type runOptions struct {
+	prv int
+}
 
 type RunOptions func(*runOptions)
 
-func WithInterval(interval time.Duration) RunOptions {
+func WithOnetimeMode() RunOptions {
 	return nil
 }
 
-func WithCheckCmdDone(fn func(name, cmd string, err error)) RunOptions {
+func WithIntervalMode(interval time.Duration) RunOptions {
 	return nil
 }
 
-func WithReloadCmdDone(fn func(name, cmd string, err error)) RunOptions {
+func WithHookBeforeCheckCmd(fn func(tcName string, err error)) RunOptions {
+	return nil
+}
+
+func WithHookAfterCheckCmd(fn func(tcName, cmd string, err error)) RunOptions {
+	return nil
+}
+
+func WithHookBeforeReloadCmd(fn func(tcName string, err error)) RunOptions {
+	return nil
+}
+
+func WithHookAfterReloadCmd(fn func(tcName, cmd string, err error)) RunOptions {
+	return nil
+}
+
+func WithFuncMap(funcs template.FuncMap) RunOptions {
 	return nil
 }
 
@@ -36,13 +54,25 @@ type Processor struct {
 	wg       sync.WaitGroup
 }
 
-func NewProcessor(cfg Config, client Client, funcs template.FuncMap) *Processor {
+func NewProcessor(cfg Config, client Client) *Processor {
 	return &Processor{
 		config: cfg,
 	}
 }
 
-func (p *Processor) RunOnce(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) IsRunning() bool {
+	return false
+}
+
+func (p *Processor) Run(ctx context.Context, opts ...RunOptions) error {
+	return nil
+}
+
+func (p *Processor) Stop() error {
+	return nil
+}
+
+func (p *Processor) _RunOnce(ctx context.Context, opts ...RunOptions) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
@@ -62,7 +92,7 @@ func (p *Processor) RunOnce(ctx context.Context, opts ...RunOptions) error {
 	return nil
 }
 
-func (p *Processor) RunInIntervalMode(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...RunOptions) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -86,7 +116,7 @@ func (p *Processor) RunInIntervalMode(ctx context.Context, opts ...RunOptions) e
 	}
 }
 
-func (p *Processor) RunInWatchMode(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...RunOptions) error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
