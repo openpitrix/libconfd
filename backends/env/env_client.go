@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE-confd file.
 
-// Package env  provides libconfd env backends client.
+// Package env provides env backends client for libconfd.
 package env
 
 import (
