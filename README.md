@@ -14,11 +14,12 @@ package main
 
 import (
 	"github.com/chai2010/libconfd"
+	"github.com/chai2010/libconfd/backends/env"
 )
 
 func main() {
 	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-	client := libconfd.NewEnvClient()
+	client := env.NewEnvClient()
 
 	libconfd.NewProcessor(cfg, client).Run()
 }
