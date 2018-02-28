@@ -7,3 +7,19 @@
 [![License](http://img.shields.io/badge/license-apache%20v2-blue.svg)](https://github.com/chai2010/libconfd/blob/master/LICENSE)
 
 mini confd lib, based on [confd](https://github.com/kelseyhightower/confd)/[memkv](https://github.com/kelseyhightower/memkv)/[secconf](https://github.com/xordataexchange/crypt).
+
+
+```go
+package main
+
+import (
+	"github.com/chai2010/libconfd"
+)
+
+func main() {
+	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
+	client := libconfd.NewEnvClient()
+
+	libconfd.NewProcessor(cfg, client).Run()
+}
+```
