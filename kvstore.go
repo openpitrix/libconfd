@@ -17,8 +17,8 @@ type KVPair struct {
 	Value string
 }
 
-func (p KVPair) String() {
-	fmt.Sprintf("KVPair{%q:%q}", p.Key, p.Value)
+func (p KVPair) String() string {
+	return fmt.Sprintf("KVPair{%q:%q}", p.Key, p.Value)
 }
 
 // A KVStore represents an in-memory key-value store safe for

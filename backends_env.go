@@ -12,8 +12,8 @@ import (
 // _EnvClient provides a shell for the env client
 type _EnvClient struct{}
 
-// NewEnvBackendClient returns a new client
-func NewEnvBackendClient() Client {
+// NewEnvClient returns a new client
+func NewEnvClient() Client {
 	return new(_EnvClient)
 }
 

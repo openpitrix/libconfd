@@ -64,7 +64,7 @@ func (p *Processor) IsRunning() bool {
 	return false
 }
 
-func (p *Processor) Run(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) Run(opts ...RunOptions) error {
 	return nil
 }
 
