@@ -21,7 +21,11 @@ func WithOnetimeMode() RunOptions {
 	return nil
 }
 
-func WithIntervalMode(interval time.Duration) RunOptions {
+func WithIntervalMode() RunOptions {
+	return nil
+}
+
+func WithInterval(interval time.Duration) RunOptions {
 	return nil
 }
 
@@ -41,7 +45,7 @@ func WithHookAfterReloadCmd(fn func(tcName, cmd string, err error)) RunOptions {
 	return nil
 }
 
-func WithFuncMap(funcs template.FuncMap) RunOptions {
+func WithFuncMap(m template.FuncMap, updateFuncMap ...func(m template.FuncMap)) RunOptions {
 	return nil
 }
 
