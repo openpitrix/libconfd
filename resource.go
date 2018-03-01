@@ -88,7 +88,7 @@ func (p *TemplateResource) SaveFile(path string) error {
 	return nil
 }
 
-func (p *TemplateResource) GetAbsKeys() []string {
+func (p *TemplateResource) getAbsKeys() []string {
 	s := make([]string, len(p.Keys))
 	for i, k := range p.Keys {
 		s[i] = path.Join(p.Prefix, k)

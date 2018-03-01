@@ -139,7 +139,7 @@ func (p *TemplateResourceProcessor) SetVars() error {
 	logger.Debug("Retrieving keys from store")
 	logger.Debug("Key prefix set to " + p.Prefix)
 
-	values, err := p.client.GetValues(p.GetAbsKeys())
+	values, err := p.client.GetValues(p.getAbsKeys())
 	if err != nil {
 		return err
 	}

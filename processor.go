@@ -138,7 +138,7 @@ func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...RunOptions) err
 
 func (p *Processor) monitorPrefix(t *TemplateResourceProcessor) {
 	defer p.wg.Done()
-	keys := t.GetAbsKeys()
+	keys := t.getAbsKeys()
 	for {
 		index, err := t.client.WatchPrefix(t.Prefix, keys, t.lastIndex, p.stopChan)
 		if err != nil {
