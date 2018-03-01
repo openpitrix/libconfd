@@ -5,14 +5,14 @@
 package libconfd
 
 import (
-	"context"
 	"sync"
 	"time"
 )
 
 type Processor struct {
-	config   Config
-	client   Client
+	config Config
+	client Client
+
 	stopChan chan bool
 	doneChan chan bool
 	errChan  chan error
@@ -22,6 +22,7 @@ type Processor struct {
 func NewProcessor(cfg Config, client Client) *Processor {
 	return &Processor{
 		config: cfg.Clone(),
+		client: client,
 	}
 }
 
@@ -30,14 +31,28 @@ func (p *Processor) IsRunning() bool {
 }
 
 func (p *Processor) Run(opts ...Options) error {
-	return nil
+	var opt = newOptions(opts...)
+
+	if opt.useOnetimeMode {
+		return p.runOnce()
+	}
+
+	if opt.useIntervalMode || !p.client.WatchEnabled() {
+		if opt.defaultInterval > 0 {
+			return p.runInIntervalMode(opt.defaultInterval)
+		} else {
+			return p.runInIntervalMode(time.Second * 600)
+		}
+	}
+
+	return p.runInWatchMode()
 }
 
 func (p *Processor) Stop() error {
 	return nil
 }
 
-func (p *Processor) _RunOnce(ctx context.Context, opts ...Options) error {
+func (p *Processor) runOnce() error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
@@ -57,7 +72,7 @@ func (p *Processor) _RunOnce(ctx context.Context, opts ...Options) error {
 	return nil
 }
 
-func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...Options) error {
+func (p *Processor) runInIntervalMode(interval time.Duration) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -75,13 +90,13 @@ func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...Options) err
 		select {
 		case <-p.stopChan:
 			break
-		case <-time.After(time.Second):
+		case <-time.After(interval):
 			continue
 		}
 	}
 }
 
-func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...Options) error {
+func (p *Processor) runInWatchMode() error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {

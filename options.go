@@ -24,6 +24,13 @@ type options struct {
 
 type Options func(*options)
 
+func newOptions(opts ...Options) *options {
+	p := new(options)
+	p.defaultInterval = time.Second * 600
+	p.ApplyOptions(opts...)
+	return p
+}
+
 func (opt *options) ApplyOptions(opts ...Options) {
 	for _, fn := range opts {
 		fn(opt)
