@@ -301,7 +301,7 @@ func (p *TemplateResourceProcessor) doReloadCmd() error {
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) Process(opts ...RunOptions) error {
+func (p *TemplateResourceProcessor) Process(opts ...Options) error {
 	if err := p.setFileMode(); err != nil {
 		return err
 	}

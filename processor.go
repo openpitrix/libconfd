@@ -7,47 +7,8 @@ package libconfd
 import (
 	"context"
 	"sync"
-	"text/template"
 	"time"
 )
-
-type runOptions struct {
-	prv int
-}
-
-type RunOptions func(*runOptions)
-
-func WithOnetimeMode() RunOptions {
-	return nil
-}
-
-func WithIntervalMode() RunOptions {
-	return nil
-}
-
-func WithInterval(interval time.Duration) RunOptions {
-	return nil
-}
-
-func WithHookBeforeCheckCmd(fn func(trName string, err error)) RunOptions {
-	return nil
-}
-
-func WithHookAfterCheckCmd(fn func(trName, cmd string, err error)) RunOptions {
-	return nil
-}
-
-func WithHookBeforeReloadCmd(fn func(trName string, err error)) RunOptions {
-	return nil
-}
-
-func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) RunOptions {
-	return nil
-}
-
-func WithFuncMap(m template.FuncMap, updateFuncMap ...func(m template.FuncMap)) RunOptions {
-	return nil
-}
 
 type Processor struct {
 	config   Config
@@ -68,7 +29,7 @@ func (p *Processor) IsRunning() bool {
 	return false
 }
 
-func (p *Processor) Run(opts ...RunOptions) error {
+func (p *Processor) Run(opts ...Options) error {
 	return nil
 }
 
@@ -76,7 +37,7 @@ func (p *Processor) Stop() error {
 	return nil
 }
 
-func (p *Processor) _RunOnce(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) _RunOnce(ctx context.Context, opts ...Options) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
@@ -96,7 +57,7 @@ func (p *Processor) _RunOnce(ctx context.Context, opts ...RunOptions) error {
 	return nil
 }
 
-func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...Options) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -120,7 +81,7 @@ func (p *Processor) _RunInIntervalMode(ctx context.Context, opts ...RunOptions) 
 	}
 }
 
-func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...RunOptions) error {
+func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...Options) error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
