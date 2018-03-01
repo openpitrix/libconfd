@@ -7,6 +7,7 @@ package libconfd
 import (
 	"bytes"
 	"os"
+	"path"
 
 	"github.com/BurntSushi/toml"
 )
@@ -19,9 +20,9 @@ type _TemplateResourceConfig struct {
 type TemplateResource struct {
 	Src           string
 	Dest          string
+	Prefix        string
 	Keys          []string
 	Mode          string
-	Prefix        string
 	Gid           int
 	Uid           int
 	CheckCmd      string `toml:"check_cmd"`
@@ -37,12 +38,9 @@ func LoadTemplateResource(data string) (*TemplateResource, error) {
 			Uid: -1,
 		},
 	}
-	md, err := toml.Decode(data, p)
+	_, err := toml.Decode(data, p)
 	if err != nil {
 		return nil, err
-	}
-	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
-		logger.Warning("config: Undecoded keys:", unknownKeys)
 	}
 
 	return &p.TemplateResource, nil
@@ -55,12 +53,9 @@ func LoadTemplateResourceFile(name string) (*TemplateResource, error) {
 			Uid: -1,
 		},
 	}
-	md, err := toml.DecodeFile(name, p)
+	_, err := toml.DecodeFile(name, p)
 	if err != nil {
 		return nil, err
-	}
-	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
-		logger.Warning("config: Undecoded keys:", unknownKeys)
 	}
 
 	return &p.TemplateResource, nil
@@ -91,4 +86,12 @@ func (p *TemplateResource) SaveFile(path string) error {
 	}
 
 	return nil
+}
+
+func (p *TemplateResource) GetAbsKeys() []string {
+	s := make([]string, len(p.Keys))
+	for i, k := range p.Keys {
+		s[i] = path.Join(p.Prefix, k)
+	}
+	return s
 }

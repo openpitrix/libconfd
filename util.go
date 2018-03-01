@@ -5,15 +5,12 @@
 package libconfd
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
-	"runtime"
+	"sort"
 )
 
-// fileInfo describes a configuration file and is returned by fileStat.
+// fileInfo describes a configuration file and is returned by readFileStat.
 type fileInfo struct {
 	Uid  uint32
 	Gid  uint32
@@ -21,63 +18,23 @@ type fileInfo struct {
 	Md5  string
 }
 
-func utilAppendPrefix(prefix string, keys []string) []string {
-	s := make([]string, len(keys))
-	for i, k := range keys {
-		s[i] = path.Join(prefix, k)
+func fileExists(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
 	}
-	return s
+	return false
 }
 
-// utilFileExist reports whether path exits.
-func utilFileExist(fpath string) bool {
-	if _, err := os.Stat(fpath); os.IsNotExist(err) {
-		return false
+func fileNotExists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return true
 	}
-	return true
+	return false
 }
 
-// utilSameConfig reports whether src and dest config files are equal.
-// Two config files are equal when they have the same file contents and
-// Unix permissions. The owner, group, and mode must match.
-// It return false in other cases.
-func utilSameConfig(src, dest string) (bool, error) {
-	if !utilFileExist(dest) {
-		return false, nil
-	}
-
-	d, err := utilFileStat(dest)
-	if err != nil {
-		return false, err
-	}
-	s, err := utilFileStat(src)
-	if err != nil {
-		return false, err
-	}
-
-	if d.Uid != s.Uid {
-		logger.Infof("%s has UID %d should be %d", dest, d.Uid, s.Uid)
-	}
-	if d.Gid != s.Gid {
-		logger.Infof("%s has GID %d should be %d", dest, d.Gid, s.Gid)
-	}
-	if d.Mode != s.Mode {
-		logger.Infof("%s has mode %s should be %s", dest, os.FileMode(d.Mode), os.FileMode(s.Mode))
-	}
-	if d.Md5 != s.Md5 {
-		logger.Infof("%s has md5sum %s should be %s", dest, d.Md5, s.Md5)
-	}
-
-	if d.Uid != s.Uid || d.Gid != s.Gid || d.Mode != s.Mode || d.Md5 != s.Md5 {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// utilRecursiveFindFiles find files with pattern in the root with depth.
-func utilRecursiveFindFiles(root string, pattern string) (files []string, err error) {
-	err = filepath.Walk(root, func(path string, f os.FileInfo, err error) (inner error) {
+// findFilesRecursive find files with pattern in the rootdir with depth.
+func findFilesRecursive(rootdir, pattern string) (files []string, err error) {
+	err = filepath.Walk(rootdir, func(path string, f os.FileInfo, err error) (inner error) {
 		if err != nil || f.IsDir() {
 			return
 		}
@@ -86,27 +43,6 @@ func utilRecursiveFindFiles(root string, pattern string) (files []string, err er
 		}
 		return
 	})
+	sort.Strings(files)
 	return
-}
-
-// utilRunCommand is a shared function used by check and reload
-// to run the given command and log its output.
-// It returns nil if the given cmd returns 0.
-// The command can be run on unix and windows.
-func utilRunCommand(cmd string) error {
-	logger.Debug("Running " + cmd)
-	var c *exec.Cmd
-	if runtime.GOOS == "windows" {
-		c = exec.Command("cmd", "/C", cmd)
-	} else {
-		c = exec.Command("/bin/sh", "-c", cmd)
-	}
-
-	output, err := c.CombinedOutput()
-	if err != nil {
-		logger.Error(fmt.Sprintf("%q", string(output)))
-		return err
-	}
-	logger.Debugf("%q", string(output))
-	return nil
 }

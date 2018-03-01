@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -39,11 +41,13 @@ func MakeAllTemplateResourceProcessor(
 	var lastError error
 	templates := make([]*TemplateResourceProcessor, 0)
 	logger.Debug("Loading template resources from confdir " + config.ConfDir)
-	if !utilFileExist(config.ConfDir) {
+
+	if fileNotExists(config.ConfDir) {
 		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
-		return nil, nil
+		return nil, fmt.Errorf("confdir '%s' does not exist", config.ConfDir)
 	}
-	paths, err := utilRecursiveFindFiles(config.ConfigDir, "*toml")
+
+	paths, err := findFilesRecursive(config.ConfigDir, "*toml")
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +115,7 @@ func NewTemplateResourceProcessor(
 		tr.Gid = os.Getegid()
 	}
 
-	_, tr.funcMap = NewTemplateFuncMap(tr.store, tr.PGPPrivateKey)
+	tr.funcMap = NewTemplateFunc(tr.store, tr.PGPPrivateKey).FuncMap
 	tr.Src = filepath.Join(config.TemplateDir, tr.Src)
 
 	return &tr, nil
@@ -122,7 +126,7 @@ func (t *TemplateResourceProcessor) SetVars() error {
 	var err error
 	logger.Debug("Retrieving keys from store")
 	logger.Debug("Key prefix set to " + t.Prefix)
-	result, err := t.storeClient.GetValues(utilAppendPrefix(t.Prefix, t.Keys))
+	result, err := t.storeClient.GetValues(t.GetAbsKeys())
 	if err != nil {
 		return err
 	}
@@ -141,7 +145,8 @@ func (t *TemplateResourceProcessor) SetVars() error {
 // It returns an error if any.
 func (t *TemplateResourceProcessor) CreateStageFile() error {
 	logger.Debug("Using source template " + t.Src)
-	if !utilFileExist(t.Src) {
+
+	if fileNotExists(t.Src) {
 		return errors.New("Missing template: " + t.Src)
 	}
 
@@ -186,7 +191,7 @@ func (t *TemplateResourceProcessor) Sync() error {
 	}
 
 	logger.Debug("Comparing candidate config to " + t.Dest)
-	ok, err := utilSameConfig(staged, t.Dest)
+	ok, err := t.checkSameConfig(staged, t.Dest)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -252,13 +257,13 @@ func (t *TemplateResourceProcessor) Check() error {
 	if err := tmpl.Execute(&cmdBuffer, data); err != nil {
 		return err
 	}
-	return utilRunCommand(cmdBuffer.String())
+	return t.runCommand(cmdBuffer.String())
 }
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
 func (t *TemplateResourceProcessor) Reload() error {
-	return utilRunCommand(t.ReloadCmd)
+	return t.runCommand(t.ReloadCmd)
 }
 
 // process is a convenience function that wraps calls to the three main tasks
@@ -285,14 +290,10 @@ func (t *TemplateResourceProcessor) Process() error {
 // setFileMode sets the FileMode.
 func (t *TemplateResourceProcessor) SetFileMode() error {
 	if t.Mode == "" {
-		if !utilFileExist(t.Dest) {
-			t.FileMode = 0644
-		} else {
-			fi, err := os.Stat(t.Dest)
-			if err != nil {
-				return err
-			}
+		if fi, err := os.Stat(t.Dest); err == nil {
 			t.FileMode = fi.Mode()
+		} else {
+			t.FileMode = 0644
 		}
 	} else {
 		mode, err := strconv.ParseUint(t.Mode, 0, 32)
@@ -302,4 +303,56 @@ func (t *TemplateResourceProcessor) SetFileMode() error {
 		t.FileMode = os.FileMode(mode)
 	}
 	return nil
+}
+
+// runCommand is a shared function used by check and reload
+// to run the given command and log its output.
+// It returns nil if the given cmd returns 0.
+// The command can be run on unix and windows.
+func (t *TemplateResourceProcessor) runCommand(cmd string) error {
+	logger.Debug("Running " + cmd)
+	var c *exec.Cmd
+	if runtime.GOOS == "windows" {
+		c = exec.Command("cmd", "/C", cmd)
+	} else {
+		c = exec.Command("/bin/sh", "-c", cmd)
+	}
+
+	output, err := c.CombinedOutput()
+	if err != nil {
+		logger.Error(fmt.Sprintf("%q", string(output)))
+		return err
+	}
+	logger.Debugf("%q", string(output))
+	return nil
+}
+
+// checkSameConfig reports whether src and dest config files are equal.
+// Two config files are equal when they have the same file contents and
+// Unix permissions. The owner, group, and mode must match.
+// It return false in other cases.
+func (_ *TemplateResourceProcessor) checkSameConfig(src, dest string) (bool, error) {
+	d, err := readFileStat(dest)
+	if err != nil {
+		return false, err
+	}
+	s, err := readFileStat(src)
+	if err != nil {
+		return false, err
+	}
+
+	if d.Uid != s.Uid {
+		return false, fmt.Errorf("%s has UID %d should be %d", dest, d.Uid, s.Uid)
+	}
+	if d.Gid != s.Gid {
+		return false, fmt.Errorf("%s has GID %d should be %d", dest, d.Gid, s.Gid)
+	}
+	if d.Mode != s.Mode {
+		return false, fmt.Errorf("%s has mode %s should be %s", dest, os.FileMode(d.Mode), os.FileMode(s.Mode))
+	}
+	if d.Md5 != s.Md5 {
+		return false, fmt.Errorf("%s has md5sum %s should be %s", dest, d.Md5, s.Md5)
+	}
+
+	return true, nil
 }

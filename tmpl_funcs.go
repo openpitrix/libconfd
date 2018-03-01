@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 )
 
@@ -31,14 +30,8 @@ type TemplateFunc struct {
 var _TemplateFunc_initFuncMap func(p *TemplateFunc) = nil
 
 func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
-	return TemplateFunc{
-		Store:         store,
-		PGPPrivateKey: pgpPrivateKey,
-	}
-}
-
-func NewTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, template.FuncMap) {
 	p := TemplateFunc{
+		FuncMap:       map[string]interface{}{},
 		Store:         store,
 		PGPPrivateKey: pgpPrivateKey,
 	}
@@ -48,7 +41,7 @@ func NewTemplateFuncMap(store *KVStore, pgpPrivateKey []byte) (TemplateFunc, tem
 	}
 
 	_TemplateFunc_initFuncMap(&p)
-	return p, p.FuncMap
+	return p
 }
 
 // ----------------------------------------------------------------------------
@@ -282,7 +275,8 @@ func (_ TemplateFunc) LookupSRV(service, proto, name string) []*net.SRV {
 }
 
 func (_ TemplateFunc) FileExists(filepath string) bool {
-	return utilFileExist(filepath)
+	_, err := os.Stat(filepath)
+	return err == nil
 }
 
 func (_ TemplateFunc) Base64Encode(data string) string {

@@ -29,19 +29,19 @@ func WithInterval(interval time.Duration) RunOptions {
 	return nil
 }
 
-func WithHookBeforeCheckCmd(fn func(tcName string, err error)) RunOptions {
+func WithHookBeforeCheckCmd(fn func(trName string, err error)) RunOptions {
 	return nil
 }
 
-func WithHookAfterCheckCmd(fn func(tcName, cmd string, err error)) RunOptions {
+func WithHookAfterCheckCmd(fn func(trName, cmd string, err error)) RunOptions {
 	return nil
 }
 
-func WithHookBeforeReloadCmd(fn func(tcName string, err error)) RunOptions {
+func WithHookBeforeReloadCmd(fn func(trName string, err error)) RunOptions {
 	return nil
 }
 
-func WithHookAfterReloadCmd(fn func(tcName, cmd string, err error)) RunOptions {
+func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) RunOptions {
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (p *Processor) _RunInWatchMode(ctx context.Context, opts ...RunOptions) err
 
 func (p *Processor) monitorPrefix(t *TemplateResourceProcessor) {
 	defer p.wg.Done()
-	keys := utilAppendPrefix(t.Prefix, t.Keys)
+	keys := t.GetAbsKeys()
 	for {
 		index, err := t.storeClient.WatchPrefix(t.Prefix, keys, t.lastIndex, p.stopChan)
 		if err != nil {

@@ -110,6 +110,8 @@ func TestProcessTemplateResources(t *testing.T) {
 }
 
 func TestSameConfigTrue(t *testing.T) {
+	var tr TemplateResourceProcessor
+
 	src, err := ioutil.TempFile("", "src")
 	defer os.Remove(src.Name())
 	if err != nil {
@@ -128,7 +130,7 @@ func TestSameConfigTrue(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	status, err := utilSameConfig(src.Name(), dest.Name())
+	status, err := tr.checkSameConfig(src.Name(), dest.Name())
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -138,6 +140,8 @@ func TestSameConfigTrue(t *testing.T) {
 }
 
 func TestSameConfigFalse(t *testing.T) {
+	var tr TemplateResourceProcessor
+
 	src, err := ioutil.TempFile("", "src")
 	defer os.Remove(src.Name())
 	if err != nil {
@@ -156,7 +160,7 @@ func TestSameConfigFalse(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	status, err := utilSameConfig(src.Name(), dest.Name())
+	status, err := tr.checkSameConfig(src.Name(), dest.Name())
 	if err != nil {
 		t.Errorf("%v", err)
 	}

@@ -8,20 +8,14 @@ package libconfd
 
 import (
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"syscall"
 )
 
-// utilFileStat return a fileInfo describing the named file.
-func utilFileStat(name string) (fi fileInfo, err error) {
-	if !utilFileExist(name) {
-		err = errors.New("File not found")
-		return
-	}
-
+// readFileStat return a fileInfo describing the named file.
+func readFileStat(name string) (fi fileInfo, err error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return fi, err
