@@ -20,6 +20,7 @@ import (
 var logger = libconfd.GetLogger()
 
 type etcdOptions struct {
+	Machines  []string
 	BasicAuth bool
 	UserName  string
 	Password  string
@@ -30,16 +31,41 @@ type etcdOptions struct {
 
 type EtcdOptions func(*etcdOptions)
 
-func WitchMachines() EtcdOptions {
-	return nil
+func newEtcdOptions(opts ...EtcdOptions) *etcdOptions {
+	p := new(etcdOptions)
+	p.applyOptions(opts...)
+	if len(p.Machines) == 0 {
+		p.Machines = []string{"127.0.0.1:2379"}
+	}
+	return p
+}
+
+func (opt *etcdOptions) applyOptions(opts ...EtcdOptions) {
+	for _, fn := range opts {
+		fn(opt)
+	}
+}
+
+func WitchMachines(node ...string) EtcdOptions {
+	return func(opt *etcdOptions) {
+		opt.Machines = append(opt.Machines, node...)
+	}
 }
 
 func WitchBasicAuth(userName, password string) EtcdOptions {
-	return nil
+	return func(opt *etcdOptions) {
+		opt.UserName = userName
+		opt.Password = password
+		opt.BasicAuth = true
+	}
 }
 
 func WitchCACert(caCert, cert, key string) EtcdOptions {
-	return nil
+	return func(opt *etcdOptions) {
+		opt.CACert = caCert
+		opt.Cert = cert
+		opt.Key = key
+	}
 }
 
 // _EtcdClient is a wrapper around the etcd client
@@ -48,11 +74,10 @@ type _EtcdClient struct {
 }
 
 func NewEtcdClient(opts ...EtcdOptions) (libconfd.Client, error) {
-	var machines []string
-	var opt *etcdOptions
+	opt := newEtcdOptions(opts...)
 
 	cfg := clientv3.Config{
-		Endpoints:            machines,
+		Endpoints:            opt.Machines,
 		DialTimeout:          5 * time.Second,
 		DialKeepAliveTime:    10 * time.Second,
 		DialKeepAliveTimeout: 3 * time.Second,
