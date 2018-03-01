@@ -133,7 +133,7 @@ func NewTemplateResourceProcessor(
 }
 
 // setVars sets the Vars for template resource.
-func (p *TemplateResourceProcessor) SetVars() error {
+func (p *TemplateResourceProcessor) setVars() error {
 	var err error
 
 	logger.Debug("Retrieving keys from store")
@@ -158,7 +158,7 @@ func (p *TemplateResourceProcessor) SetVars() error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) CreateStageFile() error {
+func (p *TemplateResourceProcessor) createStageFile() error {
 	logger.Debug("Using source template " + p.Src)
 
 	if fileNotExists(p.Src) {
@@ -199,7 +199,7 @@ func (p *TemplateResourceProcessor) CreateStageFile() error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) Sync() error {
+func (p *TemplateResourceProcessor) sync() error {
 	staged := p.stageFile.Name()
 
 	if p.keepStageFile {
@@ -227,7 +227,7 @@ func (p *TemplateResourceProcessor) Sync() error {
 	logger.Info("Target config " + p.Dest + " out of sync")
 	if !p.syncOnly && p.CheckCmd != "" {
 		// TODO: support hook
-		if err := p.Check(); err != nil {
+		if err := p.doCheckCmd(); err != nil {
 			return fmt.Errorf("Config check failed: %v", err)
 		}
 	}
@@ -261,7 +261,7 @@ func (p *TemplateResourceProcessor) Sync() error {
 
 	if !p.syncOnly && p.ReloadCmd != "" {
 		// TODO: support hook
-		if err := p.Reload(); err != nil {
+		if err := p.doReloadCmd(); err != nil {
 			return err
 		}
 	}
@@ -276,7 +276,7 @@ func (p *TemplateResourceProcessor) Sync() error {
 // check to be run on the staged file before overwriting the destination config
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
-func (p *TemplateResourceProcessor) Check() error {
+func (p *TemplateResourceProcessor) doCheckCmd() error {
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
 	data["src"] = p.stageFile.Name()
@@ -292,7 +292,7 @@ func (p *TemplateResourceProcessor) Check() error {
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
-func (p *TemplateResourceProcessor) Reload() error {
+func (p *TemplateResourceProcessor) doReloadCmd() error {
 	return p.runCommand(p.ReloadCmd)
 }
 
@@ -302,23 +302,23 @@ func (p *TemplateResourceProcessor) Reload() error {
 // things up.
 // It returns an error if any.
 func (p *TemplateResourceProcessor) Process(opts ...RunOptions) error {
-	if err := p.SetFileMode(); err != nil {
+	if err := p.setFileMode(); err != nil {
 		return err
 	}
-	if err := p.SetVars(); err != nil {
+	if err := p.setVars(); err != nil {
 		return err
 	}
-	if err := p.CreateStageFile(); err != nil {
+	if err := p.createStageFile(); err != nil {
 		return err
 	}
-	if err := p.Sync(); err != nil {
+	if err := p.sync(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // setFileMode sets the FileMode.
-func (p *TemplateResourceProcessor) SetFileMode() error {
+func (p *TemplateResourceProcessor) setFileMode() error {
 	if p.Mode == "" {
 		if fi, err := os.Stat(p.Dest); err == nil {
 			p.FileMode = fi.Mode()
