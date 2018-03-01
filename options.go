@@ -10,39 +10,83 @@ import (
 )
 
 type options struct {
-	prv int
+	useOnetimeMode  bool
+	useIntervalMode bool
+	defaultInterval time.Duration
+	funcMap         template.FuncMap
+	funcMapUpdater  []func(m template.FuncMap)
+
+	hookBeforeCheckCmd  func(trName, cmd string, err error)
+	hookAfterCheckCmd   func(trName, cmd string, err error)
+	hookBeforeReloadCmd func(trName, cmd string, err error)
+	hookAfterReloadCmd  func(trName, cmd string, err error)
 }
 
 type Options func(*options)
 
+func (opt *options) ApplyOptions(opts ...Options) {
+	for _, fn := range opts {
+		fn(opt)
+	}
+}
+
 func WithOnetimeMode() Options {
-	return nil
+	return func(opt *options) {
+		opt.useOnetimeMode = true
+	}
 }
 
 func WithIntervalMode() Options {
-	return nil
+	return func(opt *options) {
+		opt.useIntervalMode = true
+	}
 }
 
 func WithInterval(interval time.Duration) Options {
-	return nil
+	return func(opt *options) {
+		opt.defaultInterval = interval
+	}
 }
 
-func WithHookBeforeCheckCmd(fn func(trName string, err error)) Options {
-	return nil
+func WithFuncMap(maps ...template.FuncMap) Options {
+	return func(opt *options) {
+		if opt.funcMap == nil {
+			opt.funcMap = make(template.FuncMap)
+		}
+		for _, m := range maps {
+			for k, fn := range m {
+				opt.funcMap[k] = fn
+			}
+		}
+	}
+}
+
+func WithFuncMapUpdater(funcMapUpdater ...func(m template.FuncMap)) Options {
+	return func(opt *options) {
+		opt.funcMapUpdater = append(opt.funcMapUpdater, funcMapUpdater...)
+	}
+}
+
+func WithHookBeforeCheckCmd(fn func(trName, cmd string, err error)) Options {
+	return func(opt *options) {
+		opt.hookBeforeCheckCmd = fn
+	}
 }
 
 func WithHookAfterCheckCmd(fn func(trName, cmd string, err error)) Options {
-	return nil
+	return func(opt *options) {
+		opt.hookAfterCheckCmd = fn
+	}
 }
 
-func WithHookBeforeReloadCmd(fn func(trName string, err error)) Options {
-	return nil
+func WithHookBeforeReloadCmd(fn func(trName, cmd string, err error)) Options {
+	return func(opt *options) {
+		opt.hookBeforeReloadCmd = fn
+	}
 }
 
 func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) Options {
-	return nil
-}
-
-func WithFuncMap(m template.FuncMap, updateFuncMap ...func(m template.FuncMap)) Options {
-	return nil
+	return func(opt *options) {
+		opt.hookAfterReloadCmd = fn
+	}
 }
