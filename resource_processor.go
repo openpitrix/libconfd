@@ -22,14 +22,14 @@ import (
 type TemplateResourceProcessor struct {
 	TemplateResource
 
+	client        Client
+	store         *KVStore
 	stageFile     *os.File
 	funcMap       template.FuncMap
-	lastIndex     uint64
 	keepStageFile bool
-	noop          bool
-	store         *KVStore
-	storeClient   Client
+	lastIndex     uint64
 	syncOnly      bool
+	noop          bool
 }
 
 func MakeAllTemplateResourceProcessor(
@@ -38,8 +38,6 @@ func MakeAllTemplateResourceProcessor(
 	[]*TemplateResourceProcessor,
 	error,
 ) {
-	var lastError error
-	templates := make([]*TemplateResourceProcessor, 0)
 	logger.Debug("Loading template resources from confdir " + config.ConfDir)
 
 	if fileNotExists(config.ConfDir) {
@@ -49,23 +47,34 @@ func MakeAllTemplateResourceProcessor(
 
 	paths, err := findFilesRecursive(config.ConfigDir, "*toml")
 	if err != nil {
+		logger.Warning("findFilesRecursive(%q, %q): %v", config.ConfigDir, "*toml", err)
 		return nil, err
 	}
 
 	if len(paths) < 1 {
 		logger.Warning("Found no templates")
+		return nil, nil
 	}
+
+	var lastError error
+	var templates = make([]*TemplateResourceProcessor, 0)
 
 	for _, p := range paths {
 		logger.Debugf("Found template: %s", p)
+
 		t, err := NewTemplateResourceProcessor(p, config, client)
 		if err != nil {
 			lastError = err
 			continue
 		}
+
 		templates = append(templates, t)
 	}
-	return templates, lastError
+	if lastError != nil {
+		return templates, lastError
+	}
+
+	return templates, nil
 }
 
 // NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
@@ -79,17 +88,19 @@ func NewTemplateResourceProcessor(
 
 	res, err := LoadTemplateResourceFile(path)
 	if err != nil {
+		logger.Warning(err)
 		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
 	}
 
 	tr := TemplateResourceProcessor{
 		TemplateResource: *res,
 	}
-	tr.keepStageFile = config.KeepStageFile
-	tr.noop = config.Noop
-	tr.storeClient = client
+
+	tr.client = client
 	tr.store = NewKVStore()
+	tr.keepStageFile = config.KeepStageFile
 	tr.syncOnly = config.SyncOnly
+	tr.noop = config.Noop
 
 	if config.Prefix != "" {
 		tr.Prefix = config.Prefix
@@ -122,20 +133,24 @@ func NewTemplateResourceProcessor(
 }
 
 // setVars sets the Vars for template resource.
-func (t *TemplateResourceProcessor) SetVars() error {
+func (p *TemplateResourceProcessor) SetVars() error {
 	var err error
+
 	logger.Debug("Retrieving keys from store")
-	logger.Debug("Key prefix set to " + t.Prefix)
-	result, err := t.storeClient.GetValues(t.GetAbsKeys())
+	logger.Debug("Key prefix set to " + p.Prefix)
+
+	values, err := p.client.GetValues(p.GetAbsKeys())
 	if err != nil {
 		return err
 	}
-	logger.Debug("Got the following map from store: %v", result)
-	t.store.Purge()
 
-	for k, v := range result {
-		t.store.Set(path.Join("/", strings.TrimPrefix(k, t.Prefix)), v)
+	logger.Debug("Got the following map from store: %v", values)
+
+	p.store.Purge()
+	for k, v := range values {
+		p.store.Set(path.Join("/", strings.TrimPrefix(k, p.Prefix)), v)
 	}
+
 	return nil
 }
 
@@ -143,21 +158,22 @@ func (t *TemplateResourceProcessor) SetVars() error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (t *TemplateResourceProcessor) CreateStageFile() error {
-	logger.Debug("Using source template " + t.Src)
+func (p *TemplateResourceProcessor) CreateStageFile() error {
+	logger.Debug("Using source template " + p.Src)
 
-	if fileNotExists(t.Src) {
-		return errors.New("Missing template: " + t.Src)
+	if fileNotExists(p.Src) {
+		return errors.New("Missing template: " + p.Src)
 	}
 
-	logger.Debug("Compiling source template " + t.Src)
-	tmpl, err := template.New(filepath.Base(t.Src)).Funcs(template.FuncMap(t.funcMap)).ParseFiles(t.Src)
+	logger.Debug("Compiling source template " + p.Src)
+
+	tmpl, err := template.New(filepath.Base(p.Src)).Funcs(template.FuncMap(p.funcMap)).ParseFiles(p.Src)
 	if err != nil {
-		return fmt.Errorf("Unable to process template %s, %s", t.Src, err)
+		return fmt.Errorf("Unable to process template %s, %s", p.Src, err)
 	}
 
 	// create TempFile in Dest directory to avoid cross-filesystem issues
-	temp, err := ioutil.TempFile(filepath.Dir(t.Dest), "."+filepath.Base(t.Dest))
+	temp, err := ioutil.TempFile(filepath.Dir(p.Dest), "."+filepath.Base(p.Dest))
 	if err != nil {
 		return err
 	}
@@ -171,9 +187,10 @@ func (t *TemplateResourceProcessor) CreateStageFile() error {
 
 	// Set the owner, group, and mode on the stage file now to make it easier to
 	// compare against the destination configuration file later.
-	os.Chmod(temp.Name(), t.FileMode)
-	os.Chown(temp.Name(), t.Uid, t.Gid)
-	t.stageFile = temp
+	os.Chmod(temp.Name(), p.FileMode)
+	os.Chown(temp.Name(), p.Uid, p.Gid)
+
+	p.stageFile = temp
 	return nil
 }
 
@@ -182,61 +199,74 @@ func (t *TemplateResourceProcessor) CreateStageFile() error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (t *TemplateResourceProcessor) Sync() error {
-	staged := t.stageFile.Name()
-	if t.keepStageFile {
+func (p *TemplateResourceProcessor) Sync() error {
+	staged := p.stageFile.Name()
+
+	if p.keepStageFile {
 		logger.Info("Keeping staged file: " + staged)
 	} else {
 		defer os.Remove(staged)
 	}
 
-	logger.Debug("Comparing candidate config to " + t.Dest)
-	ok, err := t.checkSameConfig(staged, t.Dest)
+	logger.Debug("Comparing candidate config to " + p.Dest)
+
+	isSame, err := p.checkSameConfig(staged, p.Dest)
 	if err != nil {
-		logger.Error(err)
+		logger.Warning(err)
 	}
-	if t.noop {
-		logger.Warning("Noop mode enabled. " + t.Dest + " will not be modified")
+
+	if p.noop {
+		logger.Warning("Noop mode enabled. " + p.Dest + " will not be modified")
 		return nil
 	}
-	if !ok {
-		logger.Info("Target config " + t.Dest + " out of sync")
-		if !t.syncOnly && t.CheckCmd != "" {
-			if err := t.Check(); err != nil {
-				return fmt.Errorf("Config check failed: %v", err)
-			}
-		}
-		logger.Debug("Overwriting target config " + t.Dest)
-		err := os.Rename(staged, t.Dest)
-		if err != nil {
-			if notDeviceOrResourceBusyError(err) {
-				return err
-			}
-
-			logger.Debug("Rename failed - target is likely a mount. Trying to write instead")
-			// try to open the file and write to it
-			var contents []byte
-			var rerr error
-			contents, rerr = ioutil.ReadFile(staged)
-			if rerr != nil {
-				return rerr
-			}
-			err := ioutil.WriteFile(t.Dest, contents, t.FileMode)
-			// make sure owner and group match the temp file, in case the file was created with WriteFile
-			os.Chown(t.Dest, t.Uid, t.Gid)
-			if err != nil {
-				return err
-			}
-		}
-		if !t.syncOnly && t.ReloadCmd != "" {
-			if err := t.Reload(); err != nil {
-				return err
-			}
-		}
-		logger.Info("Target config " + t.Dest + " has been updated")
-	} else {
-		logger.Debug("Target config " + t.Dest + " in sync")
+	if isSame {
+		logger.Debug("Target config " + p.Dest + " in sync")
+		return nil
 	}
+
+	logger.Info("Target config " + p.Dest + " out of sync")
+	if !p.syncOnly && p.CheckCmd != "" {
+		// TODO: support hook
+		if err := p.Check(); err != nil {
+			return fmt.Errorf("Config check failed: %v", err)
+		}
+	}
+
+	logger.Debug("Overwriting target config " + p.Dest)
+
+	err = os.Rename(staged, p.Dest)
+	if err != nil {
+		logger.Debug("Rename failed - target is likely a mount. Trying to write instead")
+
+		if notDeviceOrResourceBusyError(err) {
+			return err
+		}
+
+		// try to open the file and write to it
+
+		var contents []byte
+		var rerr error
+		contents, rerr = ioutil.ReadFile(staged)
+		if rerr != nil {
+			return rerr
+		}
+
+		err := ioutil.WriteFile(p.Dest, contents, p.FileMode)
+		// make sure owner and group match the temp file, in case the file was created with WriteFile
+		os.Chown(p.Dest, p.Uid, p.Gid)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !p.syncOnly && p.ReloadCmd != "" {
+		// TODO: support hook
+		if err := p.Reload(); err != nil {
+			return err
+		}
+	}
+
+	logger.Info("Target config " + p.Dest + " has been updated")
 	return nil
 }
 
@@ -246,24 +276,24 @@ func (t *TemplateResourceProcessor) Sync() error {
 // check to be run on the staged file before overwriting the destination config
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
-func (t *TemplateResourceProcessor) Check() error {
+func (p *TemplateResourceProcessor) Check() error {
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
-	data["src"] = t.stageFile.Name()
-	tmpl, err := template.New("checkcmd").Parse(t.CheckCmd)
+	data["src"] = p.stageFile.Name()
+	tmpl, err := template.New("checkcmd").Parse(p.CheckCmd)
 	if err != nil {
 		return err
 	}
 	if err := tmpl.Execute(&cmdBuffer, data); err != nil {
 		return err
 	}
-	return t.runCommand(cmdBuffer.String())
+	return p.runCommand(cmdBuffer.String())
 }
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
-func (t *TemplateResourceProcessor) Reload() error {
-	return t.runCommand(t.ReloadCmd)
+func (p *TemplateResourceProcessor) Reload() error {
+	return p.runCommand(p.ReloadCmd)
 }
 
 // process is a convenience function that wraps calls to the three main tasks
@@ -271,36 +301,36 @@ func (t *TemplateResourceProcessor) Reload() error {
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (t *TemplateResourceProcessor) Process() error {
-	if err := t.SetFileMode(); err != nil {
+func (p *TemplateResourceProcessor) Process(opts ...RunOptions) error {
+	if err := p.SetFileMode(); err != nil {
 		return err
 	}
-	if err := t.SetVars(); err != nil {
+	if err := p.SetVars(); err != nil {
 		return err
 	}
-	if err := t.CreateStageFile(); err != nil {
+	if err := p.CreateStageFile(); err != nil {
 		return err
 	}
-	if err := t.Sync(); err != nil {
+	if err := p.Sync(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // setFileMode sets the FileMode.
-func (t *TemplateResourceProcessor) SetFileMode() error {
-	if t.Mode == "" {
-		if fi, err := os.Stat(t.Dest); err == nil {
-			t.FileMode = fi.Mode()
+func (p *TemplateResourceProcessor) SetFileMode() error {
+	if p.Mode == "" {
+		if fi, err := os.Stat(p.Dest); err == nil {
+			p.FileMode = fi.Mode()
 		} else {
-			t.FileMode = 0644
+			p.FileMode = 0644
 		}
 	} else {
-		mode, err := strconv.ParseUint(t.Mode, 0, 32)
+		mode, err := strconv.ParseUint(p.Mode, 0, 32)
 		if err != nil {
 			return err
 		}
-		t.FileMode = os.FileMode(mode)
+		p.FileMode = os.FileMode(mode)
 	}
 	return nil
 }
@@ -309,8 +339,9 @@ func (t *TemplateResourceProcessor) SetFileMode() error {
 // to run the given command and log its output.
 // It returns nil if the given cmd returns 0.
 // The command can be run on unix and windows.
-func (t *TemplateResourceProcessor) runCommand(cmd string) error {
-	logger.Debug("Running " + cmd)
+func (p *TemplateResourceProcessor) runCommand(cmd string) error {
+	logger.Debug("TemplateResourceProcessor.runCommand: " + cmd)
+
 	var c *exec.Cmd
 	if runtime.GOOS == "windows" {
 		c = exec.Command("cmd", "/C", cmd)
@@ -320,9 +351,10 @@ func (t *TemplateResourceProcessor) runCommand(cmd string) error {
 
 	output, err := c.CombinedOutput()
 	if err != nil {
-		logger.Error(fmt.Sprintf("%q", string(output)))
+		logger.Errorf("%q", string(output))
 		return err
 	}
+
 	logger.Debugf("%q", string(output))
 	return nil
 }
