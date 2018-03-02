@@ -61,7 +61,10 @@ func (p TemplateFunc) Lsdir(filepath string) []string {
 }
 
 func (p TemplateFunc) Get(key string) (KVPair, error) {
-	return p.Store.Get(key)
+	if v, ok := p.Store.Get(key); ok {
+		return v, nil
+	}
+	return KVPair{}, fmt.Errorf("key not exists")
 }
 
 func (p TemplateFunc) Gets(pattern string) ([]KVPair, error) {
@@ -69,7 +72,10 @@ func (p TemplateFunc) Gets(pattern string) ([]KVPair, error) {
 }
 
 func (p TemplateFunc) Getv(key string, v ...string) (string, error) {
-	return p.Store.GetValue(key, v...)
+	if v, ok := p.Store.GetValue(key, v...); ok {
+		return v, nil
+	}
+	return "", fmt.Errorf("key not exists")
 }
 
 func (p TemplateFunc) Getvs(pattern string) ([]string, error) {

@@ -34,58 +34,52 @@ func NewKVStore() *KVStore {
 }
 
 // Delete deletes the KVPair associated with key.
-func (s *KVStore) Del(key string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (p *KVStore) Del(key string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	delete(s.m, key)
+	delete(p.m, key)
 }
 
 // Exists checks for the existence of key in the store.
-func (s *KVStore) Exists(key string) bool {
-	_, err := s.Get(key)
-	if err != nil {
-		return false
-	}
-	return true
+func (p *KVStore) Exists(key string) bool {
+	_, ok := p.Get(key)
+	return ok
 }
 
 // Get gets the KVPair associated with key. If there is no KVPair
-// associated with key, Get returns KVPair{}, ErrNotExist.
-func (s *KVStore) Get(key string) (KVPair, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+// associated with key, Get returns KVPair{}, false.
+func (p *KVStore) Get(key string) (kv KVPair, ok bool) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-	kv, ok := s.m[key]
-	if !ok {
-		return KVPair{}, ErrNotExist
-	}
-	return kv, nil
+	kv, ok = p.m[key]
+	return
 }
 
 // GetValue gets the value associated with key. If there are no values
-// associated with key, GetValue returns "", ErrNotExist.
-func (s *KVStore) GetValue(key string, v ...string) (string, error) {
-	kv, err := s.Get(key)
-	if err != nil {
+// associated with key, GetValue returns "", false.
+func (p *KVStore) GetValue(key string, v ...string) (s string, ok bool) {
+	kv, ok := p.Get(key)
+	if !ok {
 		if len(v) > 0 {
 			// Take default
-			return v[0], nil
+			return v[0], true
 		}
-		return "", err
+		return "", false
 	}
-	return kv.Value, nil
+	return kv.Value, true
 }
 
 // GetAll returns a KVPair for all nodes with keys matching pattern.
 // The syntax of patterns is the same as in path.Match.
-func (s *KVStore) GetAll(pattern string) ([]KVPair, error) {
+func (p *KVStore) GetAll(pattern string) ([]KVPair, error) {
 	ks, err := func() ([]KVPair, error) {
-		s.mu.RLock()
-		defer s.mu.RUnlock()
+		p.mu.RLock()
+		defer p.mu.RUnlock()
 
 		ks := make([]KVPair, 0)
-		for _, kv := range s.m {
+		for _, kv := range p.m {
 			matched, err := path.Match(pattern, kv.Key)
 			if err != nil {
 				return nil, err
@@ -107,8 +101,8 @@ func (s *KVStore) GetAll(pattern string) ([]KVPair, error) {
 	return ks, nil
 }
 
-func (s *KVStore) GetAllValues(pattern string) ([]string, error) {
-	ks, err := s.GetAll(pattern)
+func (p *KVStore) GetAllValues(pattern string) ([]string, error) {
+	ks, err := p.GetAll(pattern)
 	if err != nil {
 		return nil, err
 	}
@@ -124,21 +118,21 @@ func (s *KVStore) GetAllValues(pattern string) ([]string, error) {
 	return vs, nil
 }
 
-func (s *KVStore) List(filePath string) []string {
+func (p *KVStore) List(filePath string) []string {
 	m := func() map[string]bool {
-		s.mu.RLock()
-		defer s.mu.RUnlock()
+		p.mu.RLock()
+		defer p.mu.RUnlock()
 
 		m := make(map[string]bool)
-		prefix := s.pathToTerms(filePath)
-		for _, kv := range s.m {
+		prefix := p.pathToTerms(filePath)
+		for _, kv := range p.m {
 			if kv.Key == filePath {
 				m[path.Base(kv.Key)] = true
 				continue
 			}
-			target := s.pathToTerms(path.Dir(kv.Key))
-			if s.samePrefixTerms(prefix, target) {
-				m[strings.Split(s.stripKey(kv.Key, filePath), "/")[0]] = true
+			target := p.pathToTerms(path.Dir(kv.Key))
+			if p.samePrefixTerms(prefix, target) {
+				m[strings.Split(p.stripKey(kv.Key, filePath), "/")[0]] = true
 			}
 		}
 
@@ -154,17 +148,17 @@ func (s *KVStore) List(filePath string) []string {
 	return vs
 }
 
-func (s *KVStore) ListDir(filePath string) []string {
+func (p *KVStore) ListDir(filePath string) []string {
 	m := func() map[string]bool {
-		s.mu.RLock()
-		defer s.mu.RUnlock()
+		p.mu.RLock()
+		defer p.mu.RUnlock()
 
 		m := make(map[string]bool)
-		prefix := s.pathToTerms(filePath)
-		for _, kv := range s.m {
+		prefix := p.pathToTerms(filePath)
+		for _, kv := range p.m {
 			if strings.HasPrefix(kv.Key, filePath) {
-				items := s.pathToTerms(path.Dir(kv.Key))
-				if s.samePrefixTerms(prefix, items) && (len(items)-len(prefix) >= 1) {
+				items := p.pathToTerms(path.Dir(kv.Key))
+				if p.samePrefixTerms(prefix, items) && (len(items)-len(prefix) >= 1) {
 					m[items[len(prefix):][0]] = true
 				}
 			}

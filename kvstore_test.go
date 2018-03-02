@@ -13,23 +13,23 @@ import (
 var tKVStore_gettests = []struct {
 	key   string
 	value string
-	err   error
+	ok    bool
 	want  KVPair
 }{
-	{"/db/user", "admin", nil, KVPair{"/db/user", "admin"}},
-	{"/db/pass", "foo", nil, KVPair{"/db/pass", "foo"}},
-	{"/missing", "", ErrNotExist, KVPair{}},
+	{"/db/user", "admin", true, KVPair{"/db/user", "admin"}},
+	{"/db/pass", "foo", true, KVPair{"/db/pass", "foo"}},
+	{"/missing", "", false, KVPair{}},
 }
 
 func TestKVStore_get(t *testing.T) {
 	for _, tt := range tKVStore_gettests {
 		s := NewKVStore()
-		if tt.err == nil {
+		if tt.ok {
 			s.Set(tt.key, tt.value)
 		}
-		got, err := s.Get(tt.key)
-		if got != tt.want || !reflect.DeepEqual(err, tt.err) {
-			t.Errorf("Get(%q) = %v, %v, want %v, %v", tt.key, got, err, tt.want, tt.err)
+		got, ok := s.Get(tt.key)
+		if got != tt.want || !reflect.DeepEqual(ok, tt.ok) {
+			t.Errorf("Get(%q) = %v, %v, want %v, %v", tt.key, got, ok, tt.want, tt.ok)
 		}
 	}
 }
@@ -37,23 +37,23 @@ func TestKVStore_get(t *testing.T) {
 var tKVStore_getvtests = []struct {
 	key   string
 	value string
-	err   error
+	ok    bool
 	want  string
 }{
-	{"/db/user", "admin", nil, "admin"},
-	{"/db/pass", "foo", nil, "foo"},
-	{"/missing", "", ErrNotExist, ""},
+	{"/db/user", "admin", true, "admin"},
+	{"/db/pass", "foo", true, "foo"},
+	{"/missing", "", false, ""},
 }
 
 func TestKVStore_getValue(t *testing.T) {
 	for _, tt := range tKVStore_getvtests {
 		s := NewKVStore()
-		if tt.err == nil {
+		if tt.ok {
 			s.Set(tt.key, tt.value)
 		}
-		got, err := s.GetValue(tt.key)
-		if got != tt.want || !reflect.DeepEqual(err, tt.err) {
-			t.Errorf("Get(%q) = %v, %v, want %v, %v", tt.key, got, err, tt.want, tt.err)
+		got, ok := s.GetValue(tt.key)
+		if got != tt.want || !reflect.DeepEqual(ok, tt.ok) {
+			t.Errorf("Get(%q) = %v, %v, want %v, %v", tt.key, got, ok, tt.want, tt.ok)
 		}
 	}
 }
@@ -61,9 +61,9 @@ func TestKVStore_getValue(t *testing.T) {
 func TestGetKVStore_valueWithDefault(t *testing.T) {
 	want := "defaultValue"
 	s := NewKVStore()
-	got, err := s.GetValue("/db/user", "defaultValue")
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	got, ok := s.GetValue("/db/user", "defaultValue")
+	if !ok {
+		t.Errorf("Unexpected error: %v", ok)
 	}
 	if got != want {
 		t.Errorf("want %v, got %v", want, got)
@@ -73,9 +73,9 @@ func TestGetKVStore_valueWithDefault(t *testing.T) {
 func TestKVStore_getValueWithEmptyDefault(t *testing.T) {
 	want := ""
 	s := NewKVStore()
-	got, err := s.GetValue("/db/user", "")
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	got, ok := s.GetValue("/db/user", "")
+	if !ok {
+		t.Errorf("Unexpected error: %v", ok)
 	}
 	if got != want {
 		t.Errorf("want %v, got %v", want, got)
@@ -133,15 +133,15 @@ func TestKVStore_del(t *testing.T) {
 	s := NewKVStore()
 	s.Set("/app/port", "8080")
 	want := KVPair{"/app/port", "8080"}
-	got, err := s.Get("/app/port")
-	if err != nil || got != want {
-		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, true)
+	got, ok := s.Get("/app/port")
+	if !ok || got != want {
+		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, ok, want, true)
 	}
 	s.Del("/app/port")
 	want = KVPair{}
-	got, err = s.Get("/app/port")
-	if err != ErrNotExist || got != want {
-		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, false)
+	got, ok = s.Get("/app/port")
+	if ok || got != want {
+		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, ok, want, false)
 	}
 	s.Del("/app/port")
 }
@@ -150,21 +150,21 @@ func TestKVStore_purge(t *testing.T) {
 	s := NewKVStore()
 	s.Set("/app/port", "8080")
 	want := KVPair{"/app/port", "8080"}
-	got, err := s.Get("/app/port")
-	if err != nil || got != want {
-		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, true)
+	got, ok := s.Get("/app/port")
+	if !ok || got != want {
+		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, ok, want, true)
 	}
 	s.Purge()
 	want = KVPair{}
-	got, err = s.Get("/app/port")
-	if err != ErrNotExist || got != want {
-		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, false)
+	got, ok = s.Get("/app/port")
+	if ok || got != want {
+		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, ok, want, false)
 	}
 	s.Set("/app/port", "8080")
 	want = KVPair{"/app/port", "8080"}
-	got, err = s.Get("/app/port")
-	if err != nil || got != want {
-		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, err, want, true)
+	got, ok = s.Get("/app/port")
+	if !ok || got != want {
+		t.Errorf("Get(%q) = %v, %v, want %v, %v", "/app/port", got, ok, want, true)
 	}
 }
 
