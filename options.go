@@ -20,6 +20,7 @@ type options struct {
 	hookAfterCheckCmd   func(trName, cmd string, err error)
 	hookBeforeReloadCmd func(trName, cmd string, err error)
 	hookAfterReloadCmd  func(trName, cmd string, err error)
+	hookError           func(trName string, err error)
 }
 
 type Options func(*options)
@@ -101,5 +102,11 @@ func WithHookBeforeReloadCmd(fn func(trName, cmd string, err error)) Options {
 func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) Options {
 	return func(opt *options) {
 		opt.hookAfterReloadCmd = fn
+	}
+}
+
+func WithHookError(fn func(trName string, err error)) Options {
+	return func(opt *options) {
+		opt.hookError = fn
 	}
 }

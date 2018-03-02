@@ -6,6 +6,7 @@ package libconfd
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,10 +15,9 @@ type Processor struct {
 	client Client
 	option *options
 
-	stopChan chan bool
-	doneChan chan bool
-	errChan  chan error
-	wg       sync.WaitGroup
+	wg     sync.WaitGroup
+	stoped int32
+	runing int32
 }
 
 func NewProcessor(cfg Config, client Client) *Processor {
@@ -28,28 +28,53 @@ func NewProcessor(cfg Config, client Client) *Processor {
 }
 
 func (p *Processor) IsRunning() bool {
-	return false
+	return atomic.LoadInt32(&p.runing) == 1
 }
 
-func (p *Processor) Run(opts ...Options) error {
+func (p *Processor) isStoped() bool {
+	return atomic.LoadInt32(&p.stoped) == 1
+}
+
+func (p *Processor) Run(opts ...Options) {
+	if !atomic.CompareAndSwapInt32(&p.runing, 0, 1) {
+		logger.Warning("Processor is running")
+		return
+	}
+
 	p.option = newOptions(opts...)
 
 	if p.option.useOnetimeMode {
-		return p.runOnce(opts...)
+		p.wg.Add(1)
+		go p.runOnce(opts...)
+		return
 	}
 
 	if p.option.useIntervalMode || !p.client.WatchEnabled() {
-		return p.runInIntervalMode(opts...)
+		p.wg.Add(1)
+		go p.runInIntervalMode(opts...)
+		return
 	}
 
-	return p.runInWatchMode(opts...)
+	p.wg.Add(1)
+	go p.runInWatchMode(opts...)
+	return
 }
 
-func (p *Processor) Stop() error {
-	return nil
+func (p *Processor) Stop() {
+	if !p.IsRunning() {
+		return
+	}
+
+	atomic.StoreInt32(&p.stoped, 1)
+	p.wg.Wait()
+
+	atomic.StoreInt32(&p.runing, 0)
+	atomic.StoreInt32(&p.stoped, 0)
 }
 
 func (p *Processor) runOnce(opts ...Options) error {
+	defer p.wg.Done()
+
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
@@ -57,7 +82,11 @@ func (p *Processor) runOnce(opts ...Options) error {
 
 	var allErrors []error
 	for _, t := range ts {
-		if err := t.Process(); err != nil {
+		if p.isStoped() {
+			break
+		}
+
+		if err := t.Process(opts...); err != nil {
 			allErrors = append(allErrors, err)
 			logger.Error(err)
 		}
@@ -69,60 +98,85 @@ func (p *Processor) runOnce(opts ...Options) error {
 	return nil
 }
 
-func (p *Processor) runInIntervalMode(opts ...Options) error {
-	defer close(p.doneChan)
+func (p *Processor) runInIntervalMode(opts ...Options) {
+	defer p.wg.Done()
+
 	for {
+		if p.isStoped() {
+			return
+		}
+
 		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 		if err != nil {
 			logger.Warning(err)
-			return err
+			return
 		}
 
 		for _, t := range ts {
-			if err := t.Process(); err != nil {
+			if p.isStoped() {
+				return
+			}
+
+			if err := t.Process(opts...); err != nil {
 				logger.Error(err)
 			}
 		}
 
-		select {
-		case <-p.stopChan:
-			break
-		case <-time.After(p.option.GetInterval()):
-			continue
-		}
+		time.Sleep(p.option.GetInterval())
 	}
 }
 
-func (p *Processor) runInWatchMode(opts ...Options) error {
-	defer close(p.doneChan)
+func (p *Processor) runInWatchMode(opts ...Options) {
+	defer p.wg.Done()
+
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		logger.Warning(err)
-		return err
+		return
 	}
-	for _, t := range ts {
-		t := t
-		p.wg.Add(1)
-		go p.monitorPrefix(t)
+
+	var wg sync.WaitGroup
+	var stopChan = make(chan bool)
+
+	for i := 0; i < len(ts); i++ {
+		wg.Add(1)
+		go p.monitorPrefix(ts[i], &wg, stopChan, opts...)
 	}
-	p.wg.Wait()
-	return nil
+
+	for {
+		if p.isStoped() {
+			stopChan <- true
+			break
+		}
+
+		time.Sleep(time.Second / 2)
+	}
+
+	wg.Wait()
+	return
 }
 
-func (p *Processor) monitorPrefix(t *TemplateResourceProcessor, opts ...Options) {
-	defer p.wg.Done()
+func (p *Processor) monitorPrefix(
+	t *TemplateResourceProcessor,
+	wg *sync.WaitGroup, stopChan chan bool,
+	opts ...Options,
+) {
+	defer wg.Done()
+
 	keys := t.getAbsKeys()
 	for {
-		index, err := t.client.WatchPrefix(t.Prefix, keys, t.lastIndex, p.stopChan)
-		if err != nil {
-			p.errChan <- err
-			// Prevent backend errors from consuming all resources.
-			time.Sleep(time.Second * 2)
-			continue
+		if p.isStoped() {
+			break
 		}
+
+		index, err := t.client.WatchPrefix(t.Prefix, keys, t.lastIndex, stopChan)
+		if err != nil {
+			logger.Error(err)
+		}
+
 		t.lastIndex = index
 		if err := t.Process(opts...); err != nil {
-			p.errChan <- err
+			logger.Error(err)
 		}
 	}
 }
