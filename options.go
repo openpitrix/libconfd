@@ -16,6 +16,7 @@ type options struct {
 	funcMap         template.FuncMap
 	funcMapUpdater  []func(m template.FuncMap)
 
+	hookAbsKeyAdjuster  func(absKey string) (realKey string)
 	hookBeforeCheckCmd  func(trName, cmd string, err error)
 	hookAfterCheckCmd   func(trName, cmd string, err error)
 	hookBeforeReloadCmd func(trName, cmd string, err error)
@@ -72,6 +73,12 @@ func WithFuncMap(maps ...template.FuncMap) Options {
 				opt.funcMap[k] = fn
 			}
 		}
+	}
+}
+
+func WithAbsKeyAdjuster(fn func(absKey string) (realKey string)) Options {
+	return func(opt *options) {
+		opt.hookAbsKeyAdjuster = fn
 	}
 }
 
