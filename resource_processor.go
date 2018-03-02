@@ -115,7 +115,7 @@ func NewTemplateResourceProcessor(
 	}
 
 	if tr.Src == "" {
-		return nil, ErrEmptySrc
+		return nil, errors.New("libconfd: empty src template")
 	}
 
 	if tr.Uid == -1 {
@@ -290,7 +290,7 @@ func (p *TemplateResourceProcessor) sync(opt *options) error {
 	if err != nil {
 		logger.Debug("Rename failed - target is likely a mount. Trying to write instead")
 
-		if notDeviceOrResourceBusyError(err) {
+		if !strings.Contains(err.Error(), "device or resource busy") {
 			return err
 		}
 
