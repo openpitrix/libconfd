@@ -12,6 +12,7 @@ import (
 type Processor struct {
 	config Config
 	client Client
+	option *options
 
 	stopChan chan bool
 	doneChan chan bool
@@ -31,28 +32,24 @@ func (p *Processor) IsRunning() bool {
 }
 
 func (p *Processor) Run(opts ...Options) error {
-	var opt = newOptions(opts...)
+	p.option = newOptions(opts...)
 
-	if opt.useOnetimeMode {
-		return p.runOnce()
+	if p.option.useOnetimeMode {
+		return p.runOnce(opts...)
 	}
 
-	if opt.useIntervalMode || !p.client.WatchEnabled() {
-		if opt.defaultInterval > 0 {
-			return p.runInIntervalMode(opt.defaultInterval)
-		} else {
-			return p.runInIntervalMode(time.Second * 600)
-		}
+	if p.option.useIntervalMode || !p.client.WatchEnabled() {
+		return p.runInIntervalMode(opts...)
 	}
 
-	return p.runInWatchMode()
+	return p.runInWatchMode(opts...)
 }
 
 func (p *Processor) Stop() error {
 	return nil
 }
 
-func (p *Processor) runOnce() error {
+func (p *Processor) runOnce(opts ...Options) error {
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
 		return err
@@ -72,7 +69,7 @@ func (p *Processor) runOnce() error {
 	return nil
 }
 
-func (p *Processor) runInIntervalMode(interval time.Duration) error {
+func (p *Processor) runInIntervalMode(opts ...Options) error {
 	defer close(p.doneChan)
 	for {
 		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -90,13 +87,13 @@ func (p *Processor) runInIntervalMode(interval time.Duration) error {
 		select {
 		case <-p.stopChan:
 			break
-		case <-time.After(interval):
+		case <-time.After(p.option.GetInterval()):
 			continue
 		}
 	}
 }
 
-func (p *Processor) runInWatchMode() error {
+func (p *Processor) runInWatchMode(opts ...Options) error {
 	defer close(p.doneChan)
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
 	if err != nil {
@@ -112,7 +109,7 @@ func (p *Processor) runInWatchMode() error {
 	return nil
 }
 
-func (p *Processor) monitorPrefix(t *TemplateResourceProcessor) {
+func (p *Processor) monitorPrefix(t *TemplateResourceProcessor, opts ...Options) {
 	defer p.wg.Done()
 	keys := t.getAbsKeys()
 	for {
@@ -124,7 +121,7 @@ func (p *Processor) monitorPrefix(t *TemplateResourceProcessor) {
 			continue
 		}
 		t.lastIndex = index
-		if err := t.Process(); err != nil {
+		if err := t.Process(opts...); err != nil {
 			p.errChan <- err
 		}
 	}

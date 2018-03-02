@@ -36,6 +36,12 @@ func (opt *options) ApplyOptions(opts ...Options) {
 		fn(opt)
 	}
 }
+func (opt *options) GetInterval() time.Duration {
+	if opt.defaultInterval > 0 {
+		return opt.defaultInterval
+	}
+	return time.Second * 600
+}
 
 func WithOnetimeMode() Options {
 	return func(opt *options) {

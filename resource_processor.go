@@ -51,9 +51,9 @@ func MakeAllTemplateResourceProcessor(
 		return nil, err
 	}
 
-	if len(paths) < 1 {
+	if len(paths) == 0 {
 		logger.Warning("Found no templates")
-		return nil, nil
+		return nil, fmt.Errorf("Found no templates")
 	}
 
 	var lastError error
@@ -111,7 +111,7 @@ func NewTemplateResourceProcessor(
 	}
 
 	if len(config.PGPPrivateKey) > 0 {
-		tr.PGPPrivateKey = config.PGPPrivateKey
+		tr.PGPPrivateKey = append([]byte{}, config.PGPPrivateKey...)
 	}
 
 	if tr.Src == "" {
@@ -132,8 +132,60 @@ func NewTemplateResourceProcessor(
 	return &tr, nil
 }
 
+// process is a convenience function that wraps calls to the three main tasks
+// required to keep local configuration files in sync. First we gather vars
+// from the store, then we stage a candidate configuration file, and finally sync
+// things up.
+// It returns an error if any.
+func (p *TemplateResourceProcessor) Process(opts ...Options) error {
+	opt := newOptions(opts...)
+
+	if len(opt.funcMap) > 0 {
+		for k, fn := range opt.funcMap {
+			p.funcMap[k] = fn
+		}
+	}
+	if len(opt.funcMapUpdater) > 0 {
+		for _, fn := range opt.funcMapUpdater {
+			fn(p.funcMap)
+		}
+	}
+
+	if err := p.setFileMode(opt); err != nil {
+		return err
+	}
+	if err := p.setVars(opt); err != nil {
+		return err
+	}
+	if err := p.createStageFile(opt); err != nil {
+		return err
+	}
+	if err := p.sync(opt); err != nil {
+		return err
+	}
+	return nil
+}
+
+// setFileMode sets the FileMode.
+func (p *TemplateResourceProcessor) setFileMode(opt *options) error {
+	if p.Mode == "" {
+		if fi, err := os.Stat(p.Dest); err == nil {
+			p.FileMode = fi.Mode()
+		} else {
+			p.FileMode = 0644
+		}
+	} else {
+		mode, err := strconv.ParseUint(p.Mode, 0, 32)
+		if err != nil {
+			return err
+		}
+		p.FileMode = os.FileMode(mode)
+	}
+	return nil
+}
+
 // setVars sets the Vars for template resource.
-func (p *TemplateResourceProcessor) setVars() error {
+func (p *TemplateResourceProcessor) setVars(opt *options) error {
 	var err error
 
 	logger.Debug("Retrieving keys from store")
@@ -158,7 +210,7 @@ func (p *TemplateResourceProcessor) setVars() error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) createStageFile() error {
+func (p *TemplateResourceProcessor) createStageFile(opt *options) error {
 	logger.Debug("Using source template " + p.Src)
 
 	if fileNotExists(p.Src) {
@@ -199,7 +251,7 @@ func (p *TemplateResourceProcessor) createStageFile() error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) sync() error {
+func (p *TemplateResourceProcessor) sync(opt *options) error {
 	staged := p.stageFile.Name()
 
 	if p.keepStageFile {
@@ -294,45 +346,6 @@ func (p *TemplateResourceProcessor) doCheckCmd() error {
 // It returns nil if the reload command returns 0.
 func (p *TemplateResourceProcessor) doReloadCmd() error {
 	return p.runCommand(p.ReloadCmd)
-}
-
-// process is a convenience function that wraps calls to the three main tasks
-// required to keep local configuration files in sync. First we gather vars
-// from the store, then we stage a candidate configuration file, and finally sync
-// things up.
-// It returns an error if any.
-func (p *TemplateResourceProcessor) Process(opts ...Options) error {
-	if err := p.setFileMode(); err != nil {
-		return err
-	}
-	if err := p.setVars(); err != nil {
-		return err
-	}
-	if err := p.createStageFile(); err != nil {
-		return err
-	}
-	if err := p.sync(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// setFileMode sets the FileMode.
-func (p *TemplateResourceProcessor) setFileMode() error {
-	if p.Mode == "" {
-		if fi, err := os.Stat(p.Dest); err == nil {
-			p.FileMode = fi.Mode()
-		} else {
-			p.FileMode = 0644
-		}
-	} else {
-		mode, err := strconv.ParseUint(p.Mode, 0, 32)
-		if err != nil {
-			return err
-		}
-		p.FileMode = os.FileMode(mode)
-	}
-	return nil
 }
 
 // runCommand is a shared function used by check and reload
