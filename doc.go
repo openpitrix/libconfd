@@ -13,12 +13,11 @@ Build a simple confd:
 
 	import (
 		"github.com/chai2010/libconfd"
-		"github.com/chai2010/libconfd/backends/etcd"
 	)
 
 	func main() {
 		cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-		client := etcd.NewEtcdClient()
+		client := libconfd.NewJsonBackendClient("./simple.json")
 
 		libconfd.NewProcessor(cfg, client).Run()
 	}
