@@ -1,6 +1,9 @@
 /cmd/miniconfd/miniconfd
 /miniconfd
 
+/_temp
+/_test
+
 *.so
 *.a
 

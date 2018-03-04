@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 var _ Client = (*JsonBackend)(nil)
@@ -44,7 +45,7 @@ func (p *JsonBackend) GetValues(keys []string) (map[string]string, error) {
 
 	m := make(map[string]string)
 	for k, v := range dataMap {
-		if s, ok := v.(string); ok {
+		if s, ok := v.(string); ok && strings.HasPrefix(k, "/") {
 			m[k] = s
 		}
 	}
