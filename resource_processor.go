@@ -45,9 +45,9 @@ func MakeAllTemplateResourceProcessor(
 		return nil, fmt.Errorf("confdir '%s' does not exist", config.ConfDir)
 	}
 
-	paths, err := findFilesRecursive(config.ConfigDir, "*toml")
+	paths, err := findFilesRecursive(config.GetConfigDir(), "*toml")
 	if err != nil {
-		logger.Warning("findFilesRecursive(%q, %q): %v", config.ConfigDir, "*toml", err)
+		logger.Warning("findFilesRecursive(%q, %q): %v", config.GetConfigDir(), "*toml", err)
 		return nil, err
 	}
 
@@ -127,7 +127,7 @@ func NewTemplateResourceProcessor(
 	}
 
 	tr.funcMap = NewTemplateFunc(tr.store, tr.PGPPrivateKey).FuncMap
-	tr.Src = filepath.Join(config.TemplateDir, tr.Src)
+	tr.Src = filepath.Join(config.GetTemplateDir(), tr.Src)
 
 	return &tr, nil
 }

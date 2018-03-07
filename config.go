@@ -8,19 +8,85 @@ import (
 	"bytes"
 	"encoding/gob"
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
-	ConfDir       string // e.g: ./confd
-	ConfigDir     string // e.g: ./confd/conf.d
-	TemplateDir   string // e.g: ./confd/templates
-	KeepStageFile bool
-	Noop          bool
-	Prefix        string
-	SyncOnly      bool
-	PGPPrivateKey []byte
+	// The path to confd configs. ("/etc/confd")
+	ConfDir string `toml:"confdir"`
+
+	// The backend polling interval in seconds. (10)
+	Interval int `toml:"interval"`
+
+	// Enable noop mode. Process all template resources; skip target update.
+	Noop bool `toml:"noop"`
+
+	// The string to prefix to keys. ("/")
+	Prefix string `toml:"prefix"`
+
+	// sync without check_cmd and reload_cmd.
+	SyncOnly bool `toml:"sync-only"`
+
+	// level which confd should log messages
+	// DEBUG/INFO/WARN/ERROR/PANIC
+	LogLevel string `toml:"log-level"`
+
+	// enable watch support
+	Watch bool `toml:"watch"`
+
+	// the YAML/JSON file to watch for changes
+	JSONFile string `toml:"json-file"`
+
+	// keep staged files
+	KeepStageFile bool `toml:"keep-stage-file"`
+
+	// PGP secret keyring (for use with crypt functions)
+	PGPPrivateKey string `toml:"pgp-private-key"`
+}
+
+const defaultConfigContent = `
+# The path to confd configs. ("/etc/confd")
+confdir = "./confd"
+
+# The backend polling interval in seconds. (10)
+interval = 10
+
+# Enable noop mode. Process all template resources; skip target update.
+noop = false
+
+# The string to prefix to keys. ("/")
+prefix = "/"
+
+# sync without check_cmd and reload_cmd.
+sync-only = true
+
+# level which confd should log messages ("DEBUG")
+log-level = "DEBUG"
+
+# enable watch support
+watch = false
+
+# the JSON file to watch for changes
+json-file = "./confd/backen-file.json"
+
+# keep staged files
+keep-stage-file = false
+
+# PGP secret keyring (for use with crypt functions)
+pgp-private-key = ""
+`
+
+func NewDefaultConfig() (p Config) {
+	md, err := toml.Decode(defaultConfigContent, &p)
+	if err != nil {
+		panic(err)
+	}
+	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
+		logger.Warning("config: Undecoded keys:", unknownKeys)
+	}
+	return
 }
 
 func MustLoadConfig(name string) Config {
@@ -77,4 +143,11 @@ func (p *Config) Clone() Config {
 	}
 
 	return q
+}
+
+func (p *Config) GetConfigDir() string {
+	return filepath.Join(p.ConfDir, "conf.d")
+}
+func (p *Config) GetTemplateDir() string {
+	return filepath.Join(p.ConfDir, "templates")
 }
