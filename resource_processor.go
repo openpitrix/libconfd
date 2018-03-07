@@ -277,7 +277,7 @@ func (p *TemplateResourceProcessor) sync(opt *options) error {
 	}
 
 	logger.Info("Target config " + p.Dest + " out of sync")
-	if !p.syncOnly && p.CheckCmd != "" {
+	if !p.syncOnly && strings.TrimSpace(p.CheckCmd) != "" {
 		// TODO: support hook
 		if err := p.doCheckCmd(); err != nil {
 			return fmt.Errorf("Config check failed: %v", err)
@@ -311,7 +311,7 @@ func (p *TemplateResourceProcessor) sync(opt *options) error {
 		}
 	}
 
-	if !p.syncOnly && p.ReloadCmd != "" {
+	if !p.syncOnly && strings.TrimSpace(p.ReloadCmd) != "" {
 		// TODO: support hook
 		if err := p.doReloadCmd(); err != nil {
 			return err
@@ -352,7 +352,9 @@ func (p *TemplateResourceProcessor) doReloadCmd() error {
 // to run the given command and log its output.
 // It returns nil if the given cmd returns 0.
 // The command can be run on unix and windows.
-func (p *TemplateResourceProcessor) runCommand(cmd string) error {
+func (_ *TemplateResourceProcessor) runCommand(cmd string) error {
+	cmd = strings.TrimSpace(cmd)
+
 	logger.Debug("TemplateResourceProcessor.runCommand: " + cmd)
 
 	var c *exec.Cmd
