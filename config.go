@@ -13,13 +13,13 @@ import (
 )
 
 type Config struct {
-	ConfDir       string
-	ConfigDir     string
+	ConfDir       string // e.g: ./confd
+	ConfigDir     string // e.g: ./confd/conf.d
+	TemplateDir   string // e.g: ./confd/templates
 	KeepStageFile bool
 	Noop          bool
 	Prefix        string
 	SyncOnly      bool
-	TemplateDir   string
 	PGPPrivateKey []byte
 }
 
@@ -32,7 +32,7 @@ func MustLoadConfig(name string) Config {
 }
 
 func LoadConfig(name string) (p Config, err error) {
-	md, err := toml.DecodeFile(name, p)
+	md, err := toml.DecodeFile(name, &p)
 	if err != nil {
 		return Config{}, err
 	}
