@@ -2,6 +2,6 @@
 # Use of this source code is governed by a Apache-style
 # license that can be found in the LICENSE file.
 
-ConfDir = "./confd"
-Interval = 600
+ConfDir = "./conf.d"
+Interval = 10
 Debug = true
