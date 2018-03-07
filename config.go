@@ -69,7 +69,7 @@ log-level = "DEBUG"
 watch = false
 
 # the JSON file to watch for changes
-json-file = "./confd/backen-file.json"
+json-file = "./confd/backend-file.json"
 
 # keep staged files
 keep-stage-file = false

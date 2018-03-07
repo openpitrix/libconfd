@@ -2,6 +2,32 @@
 # Use of this source code is governed by a Apache-style
 # license that can be found in the LICENSE file.
 
-ConfDir = "./conf.d"
-Interval = 10
-Debug = true
+# The path to confd configs. ("/etc/confd")
+confdir = "./confd"
+
+# The backend polling interval in seconds. (10)
+interval = 10
+
+# Enable noop mode. Process all template resources; skip target update.
+noop = false
+
+# The string to prefix to keys. ("/")
+prefix = "/"
+
+# sync without check_cmd and reload_cmd.
+sync-only = true
+
+# level which confd should log messages ("DEBUG")
+log-level = "DEBUG"
+
+# enable watch support
+watch = false
+
+# the JSON file to watch for changes
+json-file = "./confd/backend-file.json"
+
+# keep staged files
+keep-stage-file = false
+
+# PGP secret keyring (for use with crypt functions)
+pgp-private-key = ""

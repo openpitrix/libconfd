@@ -9,7 +9,7 @@ import (
 )
 
 func TestJsonBackend(t *testing.T) {
-	c := NewJsonBackendClient("./testdata/simple.json")
+	c := NewJsonBackendClient("./confd/backend-file.json")
 	m, err := c.GetValues([]string{""})
 	if err != nil {
 		t.Fatal(err)
