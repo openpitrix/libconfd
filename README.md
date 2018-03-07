@@ -16,8 +16,8 @@ import (
 )
 
 func main() {
-	cfg := libconfd.MustLoadConfig("~/.confd/config.toml")
-	client := libconfd.NewJsonBackendClient("./simple.json")
+	cfg := libconfd.MustLoadConfig("./confd.toml")
+	client := libconfd.NewFileBackendsClient(cfg.File)
 
 	libconfd.NewProcessor(cfg, client).Run()
 }
