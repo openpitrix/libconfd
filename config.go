@@ -36,8 +36,8 @@ type Config struct {
 	// enable watch support
 	Watch bool `toml:"watch"`
 
-	// the YAML/JSON file to watch for changes
-	JSONFile string `toml:"json-file"`
+	// the TOML/JSON file to watch for changes
+	File string `toml:"file"`
 
 	// keep staged files
 	KeepStageFile bool `toml:"keep-stage-file"`
@@ -68,8 +68,8 @@ log-level = "DEBUG"
 # enable watch support
 watch = false
 
-# the JSON file to watch for changes
-json-file = "./confd/backend-file.json"
+# the TOML/JSON file to watch for changes
+file = "./confd/backend-file.toml"
 
 # keep staged files
 keep-stage-file = false
@@ -148,6 +148,7 @@ func (p *Config) Clone() Config {
 func (p *Config) GetConfigDir() string {
 	return filepath.Join(p.ConfDir, "conf.d")
 }
+
 func (p *Config) GetTemplateDir() string {
 	return filepath.Join(p.ConfDir, "templates")
 }
