@@ -123,7 +123,7 @@ func newStdLogger(out io.Writer, prefix, level string, flag int) *stdLogger {
 		flag = log.LstdFlags | log.Lshortfile
 	}
 	if level == "" {
-		level = "WARN"
+		level = "INFO"
 	}
 
 	p := &stdLogger{Logger: log.New(out, prefix, flag)}

@@ -7,7 +7,9 @@ package libconfd
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strings"
 )
 
 // fileInfo describes a configuration file and is returned by readFileStat.
@@ -45,4 +47,22 @@ func findFilesRecursive(rootdir, pattern string) (files []string, err error) {
 	})
 	sort.Strings(files)
 	return
+}
+
+func getFuncName(skips ...int) string {
+	var skip = 1
+	if len(skips) > 0 {
+		skip = skips[0]
+	}
+
+	pc, _, _, ok := runtime.Caller(skip)
+	if !ok {
+		return ""
+	}
+
+	name := runtime.FuncForPC(pc).Name()
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	return name
 }

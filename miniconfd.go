@@ -14,12 +14,20 @@ import (
 
 var (
 	cfgfile = flag.String("config-file", "./confd.toml", "config file")
+	logger  = libconfd.GetLogger()
 )
 
 func main() {
+	logger.Debugln("main")
+	defer logger.Debugln("main return")
+
 	flag.Parse()
 
+	logger.Infoln("cfgfile:", *cfgfile)
 	cfg := libconfd.MustLoadConfig(*cfgfile)
+
+	logger.SetLevel(cfg.LogLevel)
+
 	client := libconfd.NewFileBackendsClient(cfg.File)
 
 	libconfd.NewProcessor(cfg, client).Run()

@@ -21,6 +21,9 @@ type Processor struct {
 }
 
 func NewProcessor(cfg Config, client Client) *Processor {
+	logger.Debugln(getFuncName())
+	logger.Debugf("%#v\n", cfg)
+
 	return &Processor{
 		config: cfg.Clone(),
 		client: client,
@@ -36,6 +39,8 @@ func (p *Processor) isStoped() bool {
 }
 
 func (p *Processor) Run(opts ...Options) {
+	logger.Debugln(getFuncName())
+
 	if !atomic.CompareAndSwapInt32(&p.runing, 0, 1) {
 		logger.Warning("Processor is running")
 		return
@@ -44,23 +49,47 @@ func (p *Processor) Run(opts ...Options) {
 	p.option = newOptions(opts...)
 
 	if p.option.useOnetimeMode {
+		logger.Debugln("use onetime mode")
+
 		p.wg.Add(1)
 		go p.runOnce(opts...)
 		return
 	}
 
-	if p.option.useIntervalMode || !p.client.WatchEnabled() {
+	if p.option.useIntervalMode {
+		logger.Debugln("use interval mode")
+
 		p.wg.Add(1)
 		go p.runInIntervalMode(opts...)
 		return
 	}
 
+	if p.option.useWatchMode {
+		logger.Debugln("use watch mode")
+
+		p.wg.Add(1)
+		go p.runInWatchMode(opts...)
+		return
+	}
+
+	if p.client.WatchEnabled() {
+		logger.Debugln("default watch mode")
+
+		p.wg.Add(1)
+		go p.runInWatchMode(opts...)
+		return
+	}
+
+	logger.Debugln("default interval mode")
+
 	p.wg.Add(1)
-	go p.runInWatchMode(opts...)
+	go p.runInIntervalMode(opts...)
 	return
 }
 
 func (p *Processor) Stop() {
+	logger.Debugln(getFuncName())
+
 	if !p.IsRunning() {
 		return
 	}
@@ -73,6 +102,8 @@ func (p *Processor) Stop() {
 }
 
 func (p *Processor) runOnce(opts ...Options) error {
+	logger.Debugln(getFuncName())
+
 	defer p.wg.Done()
 
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -99,6 +130,8 @@ func (p *Processor) runOnce(opts ...Options) error {
 }
 
 func (p *Processor) runInIntervalMode(opts ...Options) {
+	logger.Debugln(getFuncName())
+
 	defer p.wg.Done()
 
 	for {
@@ -127,6 +160,8 @@ func (p *Processor) runInIntervalMode(opts ...Options) {
 }
 
 func (p *Processor) runInWatchMode(opts ...Options) {
+	logger.Debugln(getFuncName())
+
 	defer p.wg.Done()
 
 	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
@@ -161,6 +196,8 @@ func (p *Processor) monitorPrefix(
 	wg *sync.WaitGroup, stopChan chan bool,
 	opts ...Options,
 ) {
+	logger.Debugln(getFuncName())
+
 	defer wg.Done()
 
 	keys := t.getAbsKeys()

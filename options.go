@@ -12,6 +12,7 @@ import (
 type options struct {
 	useOnetimeMode  bool
 	useIntervalMode bool
+	useWatchMode    bool
 	defaultInterval time.Duration
 	funcMap         template.FuncMap
 	funcMapUpdater  []func(m template.FuncMap)
@@ -60,6 +61,12 @@ func WithIntervalMode() Options {
 func WithInterval(interval time.Duration) Options {
 	return func(opt *options) {
 		opt.defaultInterval = interval
+	}
+}
+
+func WithWatchMode() Options {
+	return func(opt *options) {
+		opt.useWatchMode = true
 	}
 }
 
