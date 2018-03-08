@@ -23,7 +23,7 @@ log-level = "DEBUG"
 # enable watch support
 watch = false
 
-# the TOML/JSON file to watch for changes
+# the TOML backend file to watch for changes
 file = "./confd/backend-file.toml"
 
 # keep staged files

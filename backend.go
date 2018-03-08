@@ -4,22 +4,13 @@
 
 package libconfd
 
-import (
-	"strings"
-)
-
 type Client interface {
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
 	WatchEnabled() bool
 }
 
-// NewFileBackendsClient create toml or json backend file client
+// NewFileBackendsClient create toml backend file client
 func NewFileBackendsClient(file string) Client {
-	if strings.HasSuffix(file, ".json") {
-		return NewJsonBackendClient(file)
-	}
-
-	// toml
 	return NewTomlBackendClient(file)
 }

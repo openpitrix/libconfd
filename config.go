@@ -36,7 +36,7 @@ type Config struct {
 	// enable watch support
 	Watch bool `toml:"watch"`
 
-	// the TOML/JSON file to watch for changes
+	// the TOML backend file to watch for changes
 	File string `toml:"file"`
 
 	// keep staged files
@@ -68,7 +68,7 @@ log-level = "DEBUG"
 # enable watch support
 watch = false
 
-# the TOML/JSON file to watch for changes
+# the TOML backend file to watch for changes
 file = "./confd/backend-file.toml"
 
 # keep staged files
