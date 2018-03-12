@@ -5,215 +5,129 @@
 package libconfd
 
 import (
+	"errors"
+	"log"
 	"sync"
-	"sync/atomic"
-	"time"
 )
 
+var ErrShutdown = errors.New("libconfd: processor is shut down")
+
+type Call struct {
+	Config Config
+	Client Client
+	Opts   []Options
+	Error  error
+	Done   chan *Call
+}
+
 type Processor struct {
-	config Config
-	client Client
-	option *options
+	reqMutex   sync.Mutex // protects following
+	requestSeq uint64
 
-	wg     sync.WaitGroup
-	stoped int32
-	runing int32
+	mutex    sync.Mutex // protects following
+	seq      uint64
+	pending  map[uint64]*Call
+	closing  bool // user has called Close
+	shutdown bool // server has told us to stop
 }
 
-func NewProcessor(cfg Config, client Client) *Processor {
-	logger.Debugln(getFuncName())
-	logger.Debugf("%#v\n", cfg)
-
-	return &Processor{
-		config: cfg.Clone(),
-		client: client,
-	}
-}
-
-func (p *Processor) IsRunning() bool {
-	return atomic.LoadInt32(&p.runing) == 1
-}
-
-func (p *Processor) isStoped() bool {
-	return atomic.LoadInt32(&p.stoped) == 1
-}
-
-func (p *Processor) Run(opts ...Options) {
+func NewProcessor() *Processor {
 	logger.Debugln(getFuncName())
 
-	if !atomic.CompareAndSwapInt32(&p.runing, 0, 1) {
-		logger.Warning("Processor is running")
-		return
-	}
+	p := &Processor{}
 
-	p.option = newOptions(opts...)
-
-	if p.option.useOnetimeMode {
-		logger.Debugln("use onetime mode")
-
-		p.wg.Add(1)
-		go p.runOnce(opts...)
-		return
-	}
-
-	if p.option.useIntervalMode {
-		logger.Debugln("use interval mode")
-
-		p.wg.Add(1)
-		go p.runInIntervalMode(opts...)
-		return
-	}
-
-	if p.option.useWatchMode {
-		logger.Debugln("use watch mode")
-
-		p.wg.Add(1)
-		go p.runInWatchMode(opts...)
-		return
-	}
-
-	if p.client.WatchEnabled() {
-		logger.Debugln("default watch mode")
-
-		p.wg.Add(1)
-		go p.runInWatchMode(opts...)
-		return
-	}
-
-	logger.Debugln("default interval mode")
-
-	p.wg.Add(1)
-	go p.runInIntervalMode(opts...)
-	return
+	go p.input()
+	return p
 }
 
-func (p *Processor) Stop() {
-	logger.Debugln(getFuncName())
-
-	if !p.IsRunning() {
-		return
-	}
-
-	atomic.StoreInt32(&p.stoped, 1)
-	p.wg.Wait()
-
-	atomic.StoreInt32(&p.runing, 0)
-	atomic.StoreInt32(&p.stoped, 0)
+func (p *Processor) input() {
+	//
 }
 
-func (p *Processor) runOnce(opts ...Options) error {
-	logger.Debugln(getFuncName())
-
-	defer p.wg.Done()
-
-	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
-	if err != nil {
-		return err
+// Close calls the underlying codec's Close method. If the connection is already
+// shutting down, ErrShutdown is returned.
+func (client *Processor) Close() error {
+	client.mutex.Lock()
+	if client.closing {
+		client.mutex.Unlock()
+		return ErrShutdown
 	}
+	client.closing = true
+	client.mutex.Unlock()
 
-	var allErrors []error
-	for _, t := range ts {
-		if p.isStoped() {
-			break
-		}
-
-		if err := t.Process(opts...); err != nil {
-			allErrors = append(allErrors, err)
-			logger.Error(err)
-		}
-	}
-	if len(allErrors) > 0 {
-		return allErrors[0]
-	}
-
+	// close chan, send close single
 	return nil
 }
 
-func (p *Processor) runInIntervalMode(opts ...Options) {
-	logger.Debugln(getFuncName())
+func (p *Processor) Go(cfg Config, client Client, done chan *Call, opts ...Options) *Call {
+	call := new(Call)
 
-	defer p.wg.Done()
+	call.Config = cfg.Clone()
+	call.Client = client
+	call.Opts = append([]Options{}, opts...)
 
-	for {
-		if p.isStoped() {
-			return
+	if done == nil {
+		done = make(chan *Call, 10) // buffered.
+	} else {
+		// If caller passes done != nil, it must arrange that
+		// done has enough buffer for the number of simultaneous
+		// RPCs that will be using that channel. If the channel
+		// is totally unbuffered, it's best not to run at all.
+		if cap(done) == 0 {
+			log.Panic("rpc: done channel is unbuffered")
 		}
-
-		ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
-		if err != nil {
-			logger.Warning(err)
-			return
-		}
-
-		for _, t := range ts {
-			if p.isStoped() {
-				return
-			}
-
-			if err := t.Process(opts...); err != nil {
-				logger.Error(err)
-			}
-		}
-
-		time.Sleep(p.option.GetInterval())
 	}
+	call.Done = done
+	p.send(call)
+	return call
 }
 
-func (p *Processor) runInWatchMode(opts ...Options) {
-	logger.Debugln(getFuncName())
+func (p *Processor) Run(cfg Config, client Client, opts ...Options) error {
+	call := <-p.Go(cfg, client, make(chan *Call, 1), opts...).Done
+	return call.Error
+}
 
-	defer p.wg.Done()
+func (p *Processor) send(call *Call) {
+	p.reqMutex.Lock()
+	defer p.reqMutex.Unlock()
 
-	ts, err := MakeAllTemplateResourceProcessor(p.config, p.client)
-	if err != nil {
-		logger.Warning(err)
+	// Register this call.
+	p.mutex.Lock()
+	if p.shutdown || p.closing {
+		call.Error = ErrShutdown
+		p.mutex.Unlock()
+		call.done()
 		return
 	}
 
-	var wg sync.WaitGroup
-	var stopChan = make(chan bool)
+	seq := p.seq
+	p.seq++
+	p.pending[seq] = call
+	p.mutex.Unlock()
 
-	for i := 0; i < len(ts); i++ {
-		wg.Add(1)
-		go p.monitorPrefix(ts[i], &wg, stopChan, opts...)
-	}
+	// Encode and send the request.
+	p.requestSeq = seq
 
-	for {
-		if p.isStoped() {
-			stopChan <- true
-			break
+	var err error // = write request
+	if err != nil {
+		p.mutex.Lock()
+		call = p.pending[seq]
+		delete(p.pending, seq)
+		p.mutex.Unlock()
+		if call != nil {
+			call.Error = err
+			call.done()
 		}
-
-		time.Sleep(time.Second / 2)
 	}
-
-	wg.Wait()
-	return
 }
 
-func (p *Processor) monitorPrefix(
-	t *TemplateResourceProcessor,
-	wg *sync.WaitGroup, stopChan chan bool,
-	opts ...Options,
-) {
-	logger.Debugln(getFuncName())
-
-	defer wg.Done()
-
-	keys := t.getAbsKeys()
-	for {
-		if p.isStoped() {
-			break
-		}
-
-		index, err := t.client.WatchPrefix(t.Prefix, keys, t.lastIndex, stopChan)
-		if err != nil {
-			logger.Error(err)
-		}
-
-		t.lastIndex = index
-		if err := t.Process(opts...); err != nil {
-			logger.Error(err)
-		}
+func (call *Call) done() {
+	select {
+	case call.Done <- call:
+		// ok
+	default:
+		// We don't want to block here. It is the caller's responsibility to make
+		// sure the channel has enough buffer space. See comment in Go().
+		logger.Debugln("rpc: discarding Call reply due to insufficient Done chan capacity")
 	}
 }

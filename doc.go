@@ -19,7 +19,7 @@ Build a simple confd:
 		cfg := libconfd.MustLoadConfig("./confd.toml")
 		client := libconfd.NewFileBackendsClient(cfg.File)
 
-		libconfd.NewProcessor(cfg, client).Run()
+		libconfd.NewProcessor().Run(cfg, client)
 	}
 
 BUGS

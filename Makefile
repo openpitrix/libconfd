@@ -9,4 +9,7 @@ test:
 	go fmt ./...
 	go test ./...
 
+dev:
+	go run miniconfd.go
+
 clean:
