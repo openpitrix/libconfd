@@ -2,29 +2,5 @@
 // Use of this source code is governed by a Apache-style
 // license that can be found in the LICENSE file.
 
-/*
-Package libconfd provides mini confd lib.
-
-Examples
-
-Build a simple confd:
-
-	package main
-
-	import (
-		"github.com/chai2010/libconfd"
-	)
-
-	func main() {
-		cfg := libconfd.MustLoadConfig("./confd.toml")
-		client := libconfd.NewFileBackendsClient(cfg.File)
-
-		libconfd.NewProcessor().Run(cfg, client)
-	}
-
-BUGS
-
-Report bugs to <chaishushan@gmail.com>.
-Thanks!
-*/
+// Package libconfd provides mini confd lib.
 package libconfd

@@ -6,8 +6,8 @@ package libconfd
 
 import (
 	"errors"
-	"log"
 	"sync"
+	"time"
 )
 
 var ErrShutdown = errors.New("libconfd: processor is shut down")
@@ -20,107 +20,6 @@ type Call struct {
 	Done   chan *Call
 }
 
-type Processor struct {
-	reqMutex   sync.Mutex // protects following
-	requestSeq uint64
-
-	mutex    sync.Mutex // protects following
-	seq      uint64
-	pending  map[uint64]*Call
-	closing  bool // user has called Close
-	shutdown bool // server has told us to stop
-}
-
-func NewProcessor() *Processor {
-	logger.Debugln(getFuncName())
-
-	p := &Processor{}
-
-	go p.input()
-	return p
-}
-
-func (p *Processor) input() {
-	//
-}
-
-// Close calls the underlying codec's Close method. If the connection is already
-// shutting down, ErrShutdown is returned.
-func (client *Processor) Close() error {
-	client.mutex.Lock()
-	if client.closing {
-		client.mutex.Unlock()
-		return ErrShutdown
-	}
-	client.closing = true
-	client.mutex.Unlock()
-
-	// close chan, send close single
-	return nil
-}
-
-func (p *Processor) Go(cfg Config, client Client, done chan *Call, opts ...Options) *Call {
-	call := new(Call)
-
-	call.Config = cfg.Clone()
-	call.Client = client
-	call.Opts = append([]Options{}, opts...)
-
-	if done == nil {
-		done = make(chan *Call, 10) // buffered.
-	} else {
-		// If caller passes done != nil, it must arrange that
-		// done has enough buffer for the number of simultaneous
-		// RPCs that will be using that channel. If the channel
-		// is totally unbuffered, it's best not to run at all.
-		if cap(done) == 0 {
-			log.Panic("rpc: done channel is unbuffered")
-		}
-	}
-	call.Done = done
-	p.send(call)
-	return call
-}
-
-func (p *Processor) Run(cfg Config, client Client, opts ...Options) error {
-	call := <-p.Go(cfg, client, make(chan *Call, 1), opts...).Done
-	return call.Error
-}
-
-func (p *Processor) send(call *Call) {
-	p.reqMutex.Lock()
-	defer p.reqMutex.Unlock()
-
-	// Register this call.
-	p.mutex.Lock()
-	if p.shutdown || p.closing {
-		call.Error = ErrShutdown
-		p.mutex.Unlock()
-		call.done()
-		return
-	}
-
-	seq := p.seq
-	p.seq++
-	p.pending[seq] = call
-	p.mutex.Unlock()
-
-	// Encode and send the request.
-	p.requestSeq = seq
-
-	var err error // = write request
-	if err != nil {
-		p.mutex.Lock()
-		call = p.pending[seq]
-		delete(p.pending, seq)
-		p.mutex.Unlock()
-		if call != nil {
-			call.Error = err
-			call.done()
-		}
-	}
-}
-
 func (call *Call) done() {
 	select {
 	case call.Done <- call:
@@ -129,5 +28,125 @@ func (call *Call) done() {
 		// We don't want to block here. It is the caller's responsibility to make
 		// sure the channel has enough buffer space. See comment in Go().
 		logger.Debugln("rpc: discarding Call reply due to insufficient Done chan capacity")
+	}
+}
+
+type Processor struct {
+	pendingMutex sync.Mutex
+	pending      []*Call
+
+	closeChan chan bool
+	wg        sync.WaitGroup
+}
+
+func NewProcessor() *Processor {
+	logger.Debugln(getFuncName())
+
+	p := &Processor{
+		closeChan: make(chan bool),
+	}
+
+	p.wg.Add(1)
+	go p.run()
+	return p
+}
+
+func (p *Processor) isClosing() bool {
+	if p.closeChan == nil {
+		panic("closeChan is nil")
+	}
+	select {
+	case <-p.closeChan:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *Processor) pushPendingCall(call *Call) {
+	p.pendingMutex.Lock()
+	defer p.pendingMutex.Unlock()
+
+	p.pending = append(p.pending, call)
+}
+
+func (p *Processor) popPendingCall() *Call {
+	p.pendingMutex.Lock()
+	defer p.pendingMutex.Unlock()
+
+	if len(p.pending) == 0 {
+		return nil
+	}
+
+	call := p.pending[0]
+	p.pending = p.pending[:len(p.pending)-1]
+	return call
+}
+
+func (p *Processor) clearPendingCall() {
+	p.pendingMutex.Lock()
+	defer p.pendingMutex.Unlock()
+
+	for _, call := range p.pending {
+		call.Error = ErrShutdown
+		call.done()
+	}
+
+	p.pending = p.pending[:0]
+}
+
+func (p *Processor) Close() error {
+	close(p.closeChan)
+	p.wg.Wait()
+	return nil
+}
+
+func (p *Processor) Go(cfg Config, client Client, opts ...Options) *Call {
+	call := new(Call)
+
+	call.Config = cfg.Clone()
+	call.Client = client
+	call.Opts = append([]Options{}, opts...)
+	call.Done = make(chan *Call, 10) // buffered.
+
+	p.send(call)
+	return call
+}
+
+func (p *Processor) Run(cfg Config, client Client, opts ...Options) error {
+	call := <-p.Go(cfg, client, opts...).Done
+	return call.Error
+}
+
+func (p *Processor) send(call *Call) {
+	if p.isClosing() {
+		call.Error = ErrShutdown
+		call.done()
+		return
+	}
+
+	p.pushPendingCall(call)
+}
+
+func (p *Processor) run() {
+	defer p.wg.Done()
+
+	for {
+		if p.isClosing() {
+			p.clearPendingCall()
+			return
+		}
+
+		call := p.popPendingCall()
+		if call == nil {
+			time.Sleep(time.Second / 10)
+			continue
+		}
+
+		p.wg.Add(1)
+		go func() {
+			defer p.wg.Done()
+			p.process(call)
+		}()
 	}
 }

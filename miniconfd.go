@@ -24,10 +24,10 @@ func main() {
 	flag.Parse()
 
 	logger.Infoln("cfgfile:", *cfgfile)
-	cfg := libconfd.MustLoadConfig(*cfgfile)
 
+	cfg := libconfd.MustLoadConfig(*cfgfile)
+	client := libconfd.NewFileBackendsClient(cfg.File)
 	logger.SetLevel(cfg.LogLevel)
 
-	client := libconfd.NewFileBackendsClient(cfg.File)
-	libconfd.NewProcessor(cfg).Run(client)
+	libconfd.NewProcessor().Run(cfg, client)
 }

@@ -16,6 +16,7 @@ type options struct {
 	defaultInterval time.Duration
 	funcMap         template.FuncMap
 	funcMapUpdater  []func(m template.FuncMap)
+	closeChan       chan bool
 
 	hookAbsKeyAdjuster  func(absKey string) (realKey string)
 	hookBeforeCheckCmd  func(trName, cmd string, err error)
@@ -23,6 +24,18 @@ type options struct {
 	hookBeforeReloadCmd func(trName, cmd string, err error)
 	hookAfterReloadCmd  func(trName, cmd string, err error)
 	hookError           func(trName string, err error)
+}
+
+func (p *options) isClosing() bool {
+	if p.closeChan == nil {
+		return false
+	}
+	select {
+	case <-p.closeChan:
+		return true
+	default:
+		return false
+	}
 }
 
 type Options func(*options)
@@ -122,5 +135,11 @@ func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) Options {
 func WithHookError(fn func(trName string, err error)) Options {
 	return func(opt *options) {
 		opt.hookError = fn
+	}
+}
+
+func WithCloseChan(ch chan bool) Options {
+	return func(opt *options) {
+		opt.closeChan = ch
 	}
 }
