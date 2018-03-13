@@ -6,6 +6,8 @@ package libconfd_test
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -64,7 +66,6 @@ func Example_multiAsync() {
 }
 
 func Example_option() {
-
 	cfg := libconfd.MustLoadConfig("./confd.toml")
 	client := libconfd.NewFileBackendsClient(cfg.File)
 
@@ -72,4 +73,20 @@ func Example_option() {
 		libconfd.WithInterval(time.Second*10),
 		libconfd.WithIntervalMode(),
 	)
+}
+func Example_close() {
+	cfg := libconfd.MustLoadConfig("./confd.toml")
+	client := libconfd.NewFileBackendsClient(cfg.File)
+
+	p := libconfd.NewProcessor()
+
+	go func() {
+		defer p.Close()
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, os.Kill)
+		<-c
+	}()
+
+	p.Run(cfg, client)
 }
