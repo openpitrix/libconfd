@@ -50,13 +50,13 @@ func (p *Processor) isClosing() bool {
 	}
 }
 
-func (p *Processor) pushPendingCall(call *Call) {
+func (p *Processor) addPendingCall(call *Call) {
 	p.pendingMutex.Lock()
 	defer p.pendingMutex.Unlock()
 
 	p.pending = append(p.pending, call)
 }
-func (p *Processor) popPendingCall() *Call {
+func (p *Processor) getPendingCall() *Call {
 	p.pendingMutex.Lock()
 	defer p.pendingMutex.Unlock()
 
@@ -65,7 +65,7 @@ func (p *Processor) popPendingCall() *Call {
 	}
 
 	call := p.pending[0]
-	p.pending = p.pending[:len(p.pending)-1]
+	p.pending = p.pending[1:]
 	return call
 }
 func (p *Processor) clearPendingCall() {
@@ -95,7 +95,7 @@ func NewProcessor() *Processor {
 				return
 			}
 
-			call := p.popPendingCall()
+			call := p.getPendingCall()
 			if call == nil {
 				time.Sleep(time.Second / 10)
 				continue
@@ -120,7 +120,7 @@ func (p *Processor) Go(cfg Config, client Client, opts ...Options) *Call {
 	call.Opts = append([]Options{}, opts...)
 	call.Done = make(chan *Call, 10) // buffered.
 
-	p.pushPendingCall(call)
+	p.addPendingCall(call)
 	return call
 }
 

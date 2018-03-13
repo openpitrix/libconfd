@@ -102,6 +102,14 @@ func NewTemplateResourceProcessor(
 	tr.syncOnly = config.SyncOnly
 	tr.noop = config.Noop
 
+	if config.ConfDir != "" {
+		if s := tr.Dest; !filepath.IsAbs(s) {
+			config.makeTemplateDir()
+			tr.Dest = filepath.Join(config.GetTemplateDir(), s)
+			tr.Dest = filepath.Clean(tr.Dest)
+		}
+	}
+
 	if config.Prefix != "" {
 		tr.Prefix = config.Prefix
 	}
