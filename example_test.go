@@ -90,3 +90,11 @@ func Example_close() {
 
 	p.Run(cfg, client)
 }
+
+func Example_logger() {
+	var logger = libconfd.GetLogger()
+
+	logger.SetLevel("DEBUG")
+	logger.Debug("1+1=2")
+	logger.Info("hello")
+}
