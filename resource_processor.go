@@ -33,7 +33,7 @@ type TemplateResourceProcessor struct {
 }
 
 func MakeAllTemplateResourceProcessor(
-	config Config, client Client,
+	config *Config, client Client,
 ) (
 	[]*TemplateResourceProcessor,
 	error,
@@ -79,7 +79,7 @@ func MakeAllTemplateResourceProcessor(
 
 // NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
 func NewTemplateResourceProcessor(
-	path string, config Config, client Client,
+	path string, config *Config, client Client,
 ) (
 	*TemplateResourceProcessor,
 	error,

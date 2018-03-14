@@ -78,18 +78,16 @@ keep-stage-file = false
 pgp-private-key = ""
 `
 
-func NewDefaultConfig() (p Config) {
-	md, err := toml.Decode(defaultConfigContent, &p)
+func NewDefaultConfig() (p *Config) {
+	p = new(Config)
+	_, err := toml.Decode(defaultConfigContent, p)
 	if err != nil {
 		panic(err)
-	}
-	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
-		logger.Warning("config: Undecoded keys:", unknownKeys)
 	}
 	return
 }
 
-func MustLoadConfig(name string) Config {
+func MustLoadConfig(name string) *Config {
 	p, err := LoadConfig(name)
 	if err != nil {
 		logger.Fatal(err)
@@ -97,13 +95,11 @@ func MustLoadConfig(name string) Config {
 	return p
 }
 
-func LoadConfig(name string) (p Config, err error) {
-	md, err := toml.DecodeFile(name, &p)
+func LoadConfig(name string) (p *Config, err error) {
+	p = new(Config)
+	_, err = toml.DecodeFile(name, p)
 	if err != nil {
-		return Config{}, err
-	}
-	if unknownKeys := md.Undecoded(); len(unknownKeys) != 0 {
-		logger.Warning("config: Undecoded keys:", unknownKeys)
+		return nil, err
 	}
 	return p, nil
 }
@@ -126,9 +122,9 @@ func (p *Config) Save(name string) error {
 	return nil
 }
 
-func (p *Config) Clone() Config {
+func (p *Config) Clone() *Config {
 	var (
-		q   Config
+		q   = new(Config)
 		buf bytes.Buffer
 	)
 
@@ -138,7 +134,7 @@ func (p *Config) Clone() Config {
 	if err := enc.Encode(p); err != nil {
 		logger.Fatal(err)
 	}
-	if err := dec.Decode(&q); err != nil {
+	if err := dec.Decode(q); err != nil {
 		logger.Fatal(err)
 	}
 

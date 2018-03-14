@@ -12,7 +12,7 @@ import (
 )
 
 type Call struct {
-	Config Config
+	Config *Config
 	Client Client
 	Opts   []Options
 	Error  error
@@ -112,7 +112,7 @@ func NewProcessor() *Processor {
 	return p
 }
 
-func (p *Processor) Go(cfg Config, client Client, opts ...Options) *Call {
+func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 	call := new(Call)
 
 	call.Config = cfg.Clone()
@@ -124,7 +124,7 @@ func (p *Processor) Go(cfg Config, client Client, opts ...Options) *Call {
 	return call
 }
 
-func (p *Processor) Run(cfg Config, client Client, opts ...Options) error {
+func (p *Processor) Run(cfg *Config, client Client, opts ...Options) error {
 	call := <-p.Go(cfg, client, opts...).Done
 	return call.Error
 }
