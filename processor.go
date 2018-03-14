@@ -160,17 +160,16 @@ func (p *Processor) runOnce(call *Call) {
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
 		logger.Error(err)
+		call.Error = err
 		return
 	}
 
-	var allErrors []error
 	for _, t := range ts {
 		if p.isClosing() || opt.isClosing() {
 			return
 		}
 
 		if err := t.Process(call.Opts...); err != nil {
-			allErrors = append(allErrors, err)
 			logger.Error(err)
 		}
 	}
@@ -189,7 +188,8 @@ func (p *Processor) runInIntervalMode(call *Call) {
 		ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 		if err != nil {
 			logger.Warning(err)
-			continue
+			call.Error = err
+			return
 		}
 
 		for _, t := range ts {
@@ -199,6 +199,7 @@ func (p *Processor) runInIntervalMode(call *Call) {
 
 			if err := t.Process(call.Opts...); err != nil {
 				logger.Error(err)
+				continue
 			}
 		}
 
@@ -222,7 +223,7 @@ func (p *Processor) runInWatchMode(call *Call) {
 		wg.Add(1)
 		go func(t *TemplateResourceProcessor) {
 			defer wg.Done()
-			p.monitorPrefix(t, &wg, stopChan, call)
+			p.monitorPrefix(t, &wg, stopChan, call.Opts...)
 		}(ts[i])
 	}
 
@@ -242,9 +243,9 @@ func (p *Processor) runInWatchMode(call *Call) {
 func (p *Processor) monitorPrefix(
 	t *TemplateResourceProcessor,
 	wg *sync.WaitGroup, stopChan chan bool,
-	call *Call,
+	opts ...Options,
 ) {
-	opt := newOptions(call.Opts...)
+	opt := newOptions(opts...)
 	keys := t.getAbsKeys()
 
 	for {
@@ -258,7 +259,7 @@ func (p *Processor) monitorPrefix(
 		}
 
 		t.lastIndex = index
-		if err := t.Process(call.Opts...); err != nil {
+		if err := t.Process(opts...); err != nil {
 			logger.Error(err)
 		}
 	}

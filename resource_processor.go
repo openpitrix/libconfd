@@ -64,6 +64,7 @@ func MakeAllTemplateResourceProcessor(
 
 		t, err := NewTemplateResourceProcessor(p, config, client)
 		if err != nil {
+			logger.Error(err)
 			lastError = err
 			continue
 		}
@@ -160,15 +161,19 @@ func (p *TemplateResourceProcessor) Process(opts ...Options) error {
 	}
 
 	if err := p.setFileMode(opt); err != nil {
+		logger.Error(err)
 		return err
 	}
 	if err := p.setVars(opt); err != nil {
+		logger.Error(err)
 		return err
 	}
 	if err := p.createStageFile(opt); err != nil {
+		logger.Error(err)
 		return err
 	}
 	if err := p.sync(opt); err != nil {
+		logger.Error(err)
 		return err
 	}
 	return nil
@@ -219,28 +224,30 @@ func (p *TemplateResourceProcessor) setVars(opt *options) error {
 // StageFile for the template resource.
 // It returns an error if any.
 func (p *TemplateResourceProcessor) createStageFile(opt *options) error {
-	logger.Debug("Using source template " + p.Src)
-
 	if fileNotExists(p.Src) {
-		return errors.New("Missing template: " + p.Src)
+		err := errors.New("Missing template: " + p.Src)
+		logger.Error(err)
+		return err
 	}
-
-	logger.Debug("Compiling source template " + p.Src)
 
 	tmpl, err := template.New(filepath.Base(p.Src)).Funcs(template.FuncMap(p.funcMap)).ParseFiles(p.Src)
 	if err != nil {
-		return fmt.Errorf("Unable to process template %s, %s", p.Src, err)
+		err := fmt.Errorf("Unable to process template %s, %s", p.Src, err)
+		logger.Error(err)
+		return err
 	}
 
 	// create TempFile in Dest directory to avoid cross-filesystem issues
 	temp, err := ioutil.TempFile(filepath.Dir(p.Dest), "."+filepath.Base(p.Dest))
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 
 	if err = tmpl.Execute(temp, nil); err != nil {
 		temp.Close()
 		os.Remove(temp.Name())
+		logger.Error(err)
 		return err
 	}
 	defer temp.Close()

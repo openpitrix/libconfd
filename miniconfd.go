@@ -18,16 +18,10 @@ var (
 )
 
 func main() {
-	logger.Debugln("main")
-	defer logger.Debugln("main return")
-
 	flag.Parse()
-
-	logger.Infoln("cfgfile:", *cfgfile)
 
 	cfg := libconfd.MustLoadConfig(*cfgfile)
 	client := libconfd.NewFileBackendsClient(cfg.File)
-	logger.SetLevel(cfg.LogLevel)
 
 	libconfd.NewProcessor().Run(cfg, client)
 }
