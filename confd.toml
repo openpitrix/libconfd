@@ -2,7 +2,11 @@
 # Use of this source code is governed by a Apache-style
 # license that can be found in the LICENSE file.
 
-# The path to confd configs. ("/etc/confd")
+# The path to confd configs.
+# If the confdir is rel path, must convert to abs path.
+#
+# abspath = filepath.Join(ConfigPath, Config.ConfDir)
+#
 confdir = "./confd"
 
 # The backend polling interval in seconds. (10)

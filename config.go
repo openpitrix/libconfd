@@ -7,6 +7,7 @@ package libconfd
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -14,7 +15,11 @@ import (
 )
 
 type Config struct {
-	// The path to confd configs. ("/etc/confd")
+	// The path to confd configs.
+	// If the confdir is rel path, must convert to abs path.
+	//
+	// abspath = filepath.Join(ConfigPath, Config.ConfDir)
+	//
 	ConfDir string `toml:"confdir"`
 
 	// The backend polling interval in seconds. (10)
@@ -47,8 +52,12 @@ type Config struct {
 }
 
 const defaultConfigContent = `
-# The path to confd configs. ("/etc/confd")
-confdir = "./confd"
+# The path to confd configs.
+# If the confdir is rel path, must convert to abs path.
+#
+# abspath = filepath.Join(ConfigPath, Config.ConfDir)
+#
+confdir = "confd"
 
 # The backend polling interval in seconds. (10)
 interval = 10
@@ -78,30 +87,85 @@ keep-stage-file = false
 pgp-private-key = ""
 `
 
-func NewDefaultConfig() (p *Config) {
+func newDefaultConfig() (p *Config) {
 	p = new(Config)
 	_, err := toml.Decode(defaultConfigContent, p)
 	if err != nil {
-		panic(err)
+		logger.Panic(err)
+	}
+	if !filepath.IsAbs(p.ConfDir) {
+		absdir, err := filepath.Abs(".")
+		if err != nil {
+			logger.Panic(err)
+		}
+		p.ConfDir = filepath.Clean(filepath.Join(absdir, p.ConfDir))
+	}
+	if p.File != "" && !filepath.IsAbs(p.File) {
+		absdir, err := filepath.Abs(".")
+		if err != nil {
+			logger.Panic(err)
+		}
+		p.File = filepath.Clean(filepath.Join(absdir, p.File))
 	}
 	return
 }
 
-func MustLoadConfig(name string) *Config {
-	p, err := LoadConfig(name)
+func MustLoadConfig(path string) *Config {
+	p, err := LoadConfig(path)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	return p
 }
 
-func LoadConfig(name string) (p *Config, err error) {
+func LoadConfig(path string) (p *Config, err error) {
 	p = new(Config)
-	_, err = toml.DecodeFile(name, p)
+	_, err = toml.DecodeFile(path, p)
 	if err != nil {
 		return nil, err
 	}
+	if !filepath.IsAbs(p.ConfDir) {
+		absdir, err := filepath.Abs(filepath.Dir(path))
+		logger.Debugln(absdir)
+		if err != nil {
+			return nil, err
+		}
+		p.ConfDir = filepath.Clean(filepath.Join(absdir, p.ConfDir))
+	}
+	if p.File != "" && !filepath.IsAbs(p.File) {
+		absdir, err := filepath.Abs(filepath.Dir(path))
+		logger.Debugln(absdir)
+		if err != nil {
+			return nil, err
+		}
+		p.File = filepath.Clean(filepath.Join(absdir, p.File))
+	}
 	return p, nil
+}
+
+func (p *Config) Valid() error {
+	if !filepath.IsAbs(p.ConfDir) {
+		return fmt.Errorf("ConfDir is not abs path: %s", p.ConfDir)
+	}
+	if p.File != "" && !filepath.IsAbs(p.File) {
+		return fmt.Errorf("BackendFile is not abs path: %s", p.File)
+	}
+
+	if !dirExists(p.ConfDir) {
+		return fmt.Errorf("ConfDir not exists: %s", p.ConfDir)
+	}
+	if p.File != "" && !fileExists(p.File) {
+		return fmt.Errorf("BackendFile not exists: %s", p.File)
+	}
+
+	if p.Interval < 0 {
+		return fmt.Errorf("invalid Interval: %s", p.Interval)
+	}
+	if !newLogLevel(p.LogLevel).Valid() {
+		return fmt.Errorf("invalid LogLevel: %s", p.LogLevel)
+	}
+
+	return nil
 }
 
 func (p *Config) Save(name string) error {

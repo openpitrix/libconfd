@@ -5,29 +5,22 @@
 package libconfd
 
 import (
-	"io/ioutil"
-	"os"
 	"reflect"
 	"testing"
 )
 
 func TestNewDefaultConfig(t *testing.T) {
-	_ = NewDefaultConfig()
+	_ = newDefaultConfig()
 }
 
 func TestConfig(t *testing.T) {
-	cfgfile := "./_confd.toml"
-
-	defer os.Remove(cfgfile)
-	ioutil.WriteFile(cfgfile, []byte(defaultConfigContent), 0666)
-
-	p, err := LoadConfig(cfgfile)
+	p, err := LoadConfig("confd.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tConfig := NewDefaultConfig()
+	tConfig := newDefaultConfig()
 	if !reflect.DeepEqual(p, tConfig) {
-		t.Fatalf("expect = %#v, got = %#v", p, tConfig)
+		t.Fatalf("expect = %#v, got = %#v", tConfig, p)
 	}
 }

@@ -68,7 +68,7 @@ func (p *TemplateResource) TomlString() string {
 
 	buf := new(bytes.Buffer)
 	if err := toml.NewEncoder(buf).Encode(q); err != nil {
-		panic(err)
+		logger.Panic(err)
 	}
 	return buf.String()
 }

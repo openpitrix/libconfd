@@ -40,7 +40,7 @@ type Processor struct {
 
 func (p *Processor) isClosing() bool {
 	if p.closeChan == nil {
-		panic("closeChan is nil")
+		logger.Panic("closeChan is nil")
 	}
 	select {
 	case <-p.closeChan:
@@ -113,6 +113,10 @@ func NewProcessor() *Processor {
 }
 
 func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
+	if client == nil {
+		logger.Panic("client is nil")
+	}
+
 	call := new(Call)
 
 	call.Config = cfg.Clone()
@@ -120,11 +124,24 @@ func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 	call.Opts = append([]Options{}, opts...)
 	call.Done = make(chan *Call, 10) // buffered.
 
+	if err := cfg.Valid(); err != nil {
+		call.Error = err
+		call.done()
+		return call
+	}
+
 	p.addPendingCall(call)
 	return call
 }
 
 func (p *Processor) Run(cfg *Config, client Client, opts ...Options) error {
+	if err := cfg.Valid(); err != nil {
+		return err
+	}
+	if client == nil {
+		logger.Panic("client is nil")
+	}
+
 	call := <-p.Go(cfg, client, opts...).Done
 	return call.Error
 }

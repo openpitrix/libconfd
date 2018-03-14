@@ -37,7 +37,7 @@ func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
 	}
 
 	if _TemplateFunc_initFuncMap == nil {
-		panic("_TemplateFunc_initFuncMap missing")
+		logger.Panic("_TemplateFunc_initFuncMap missing")
 	}
 
 	_TemplateFunc_initFuncMap(&p)

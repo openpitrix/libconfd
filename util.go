@@ -20,6 +20,17 @@ type fileInfo struct {
 	Md5  string
 }
 
+func dirExists(path string) bool {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	if !fi.IsDir() {
+		return false
+	}
+	return true
+}
+
 func fileExists(path string) bool {
 	if _, err := os.Stat(path); err == nil {
 		return true
