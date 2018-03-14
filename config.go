@@ -149,6 +149,6 @@ func (p *Config) GetTemplateDir() string {
 	return filepath.Join(p.ConfDir, "templates")
 }
 
-func (p *Config) makeTemplateDir() {
-	os.MkdirAll(p.GetTemplateDir(), 0744)
+func (p *Config) GetDefaultTemplateOutputDir() string {
+	return filepath.Join(p.ConfDir, "templates_output")
 }

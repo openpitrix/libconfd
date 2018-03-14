@@ -1,6 +1,6 @@
 [template]
 src = "tomcat-users.xml.tmpl"
-dest = "/usr/local/tomcat/conf/tomcat-users.xml"
+dest = "tomcat-users.xml"
 
 prefix = "tomcat"
 keys = [

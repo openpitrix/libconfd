@@ -1,6 +1,6 @@
 [template]
 src = "server.xml.tmpl"
-dest = "/usr/local/tomcat/conf/server.xml"
+dest = "server.xml"
 
 check_cmd = """
 	/usr/local/tomcat/bin/catalina.sh configtest

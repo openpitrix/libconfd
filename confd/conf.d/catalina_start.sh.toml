@@ -6,7 +6,7 @@ keys = [
 ]
 
 src = "catalina_start.sh.tmpl"
-dest = "/usr/local/tomcat/bin/catalina_start.sh"
+dest = "catalina_start.sh"
 mode = "0775"
 
 reload_cmd = """

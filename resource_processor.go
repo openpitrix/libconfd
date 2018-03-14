@@ -51,6 +51,8 @@ func MakeAllTemplateResourceProcessor(
 		return nil, err
 	}
 
+	logger.Debugln("paths:", paths)
+
 	if len(paths) == 0 {
 		logger.Warning("Found no templates")
 		return nil, fmt.Errorf("Found no templates")
@@ -105,8 +107,8 @@ func NewTemplateResourceProcessor(
 
 	if config.ConfDir != "" {
 		if s := tr.Dest; !filepath.IsAbs(s) {
-			config.makeTemplateDir()
-			tr.Dest = filepath.Join(config.GetTemplateDir(), s)
+			os.MkdirAll(config.GetDefaultTemplateOutputDir(), 0744)
+			tr.Dest = filepath.Join(config.GetDefaultTemplateOutputDir(), s)
 			tr.Dest = filepath.Clean(tr.Dest)
 		}
 	}
@@ -199,17 +201,17 @@ func (p *TemplateResourceProcessor) setFileMode(opt *options) error {
 
 // setVars sets the Vars for template resource.
 func (p *TemplateResourceProcessor) setVars(opt *options) error {
-	var err error
+	logger.Debugln("prefix:", p.Prefix)
 
-	logger.Debug("Retrieving keys from store")
-	logger.Debug("Key prefix set to " + p.Prefix)
+	absKeys := p.getAbsKeys()
+	logger.Debugf("absKeys: %#v\n", absKeys)
 
-	values, err := p.client.GetValues(p.getAbsKeys())
+	values, err := p.client.GetValues(absKeys)
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("Got the following map from store: %v", values)
+	logger.Debugf("GetValues: %#v\n", values)
 
 	p.store.Purge()
 	for k, v := range values {
