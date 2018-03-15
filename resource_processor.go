@@ -165,33 +165,31 @@ func NewTemplateResourceProcessor(
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) Process(opts ...Options) error {
-	opt := newOptions(opts...)
-
-	if len(opt.funcMap) > 0 {
-		for k, fn := range opt.funcMap {
+func (p *TemplateResourceProcessor) Process(call *Call) error {
+	if len(call.Config.FuncMap) > 0 {
+		for k, fn := range call.Config.FuncMap {
 			p.funcMap[k] = fn
 		}
 	}
-	if len(opt.funcMapUpdater) > 0 {
-		for _, fn := range opt.funcMapUpdater {
+	if len(call.Config.FuncMapUpdater) > 0 {
+		for _, fn := range call.Config.FuncMapUpdater {
 			fn(p.funcMap)
 		}
 	}
 
-	if err := p.setFileMode(opt); err != nil {
+	if err := p.setFileMode(call); err != nil {
 		logger.Error(err)
 		return err
 	}
-	if err := p.setVars(opt); err != nil {
+	if err := p.setVars(call); err != nil {
 		logger.Error(err)
 		return err
 	}
-	if err := p.createStageFile(opt); err != nil {
+	if err := p.createStageFile(call); err != nil {
 		logger.Error(err)
 		return err
 	}
-	if err := p.sync(opt); err != nil {
+	if err := p.sync(call); err != nil {
 		logger.Error(err)
 		return err
 	}
@@ -199,7 +197,7 @@ func (p *TemplateResourceProcessor) Process(opts ...Options) error {
 }
 
 // setFileMode sets the FileMode.
-func (p *TemplateResourceProcessor) setFileMode(opt *options) error {
+func (p *TemplateResourceProcessor) setFileMode(call *Call) error {
 	if p.Mode == "" {
 		if fi, err := os.Stat(p.Dest); err == nil {
 			p.FileMode = fi.Mode()
@@ -217,7 +215,7 @@ func (p *TemplateResourceProcessor) setFileMode(opt *options) error {
 }
 
 // setVars sets the Vars for template resource.
-func (p *TemplateResourceProcessor) setVars(opt *options) error {
+func (p *TemplateResourceProcessor) setVars(call *Call) error {
 	logger.Debugln("prefix:", p.Prefix)
 
 	absKeys := p.getAbsKeys()
@@ -242,7 +240,7 @@ func (p *TemplateResourceProcessor) setVars(opt *options) error {
 // template and setting the desired owner, group, and mode. It also sets the
 // StageFile for the template resource.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) createStageFile(opt *options) error {
+func (p *TemplateResourceProcessor) createStageFile(call *Call) error {
 	if fileNotExists(p.Src) {
 		err := errors.New("Missing template: " + p.Src)
 		logger.Error(err)
@@ -285,7 +283,7 @@ func (p *TemplateResourceProcessor) createStageFile(opt *options) error {
 // overwriting the target config file. Finally, sync will run a reload command
 // if set to have the application or service pick up the changes.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) sync(opt *options) error {
+func (p *TemplateResourceProcessor) sync(call *Call) error {
 	staged := p.stageFile.Name()
 
 	if p.keepStageFile {

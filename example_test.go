@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"time"
 
 	"github.com/chai2010/libconfd"
 )
@@ -70,7 +69,6 @@ func Example_option() {
 	client := libconfd.NewFileBackendsClient(cfg.File)
 
 	libconfd.NewProcessor().Run(cfg, client,
-		libconfd.WithInterval(time.Second*10),
 		libconfd.WithIntervalMode(),
 	)
 }

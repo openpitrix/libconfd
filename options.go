@@ -6,140 +6,94 @@ package libconfd
 
 import (
 	"text/template"
-	"time"
 )
 
-type options struct {
-	useOnetimeMode  bool
-	useIntervalMode bool
-	useWatchMode    bool
-	defaultInterval time.Duration
-	funcMap         template.FuncMap
-	funcMapUpdater  []func(m template.FuncMap)
-	closeChan       chan bool
+type Options func(*Config)
 
-	hookAbsKeyAdjuster  func(absKey string) (realKey string)
-	hookBeforeCheckCmd  func(trName, cmd string, err error)
-	hookAfterCheckCmd   func(trName, cmd string, err error)
-	hookBeforeReloadCmd func(trName, cmd string, err error)
-	hookAfterReloadCmd  func(trName, cmd string, err error)
-	hookError           func(trName string, err error)
-}
-
-func (p *options) isClosing() bool {
-	if p.closeChan == nil {
-		return false
+func (p *Config) applyOptions(opts ...Options) *Config {
+	for _, fn := range opts {
+		fn(p)
 	}
-	select {
-	case <-p.closeChan:
-		return true
-	default:
-		return false
-	}
-}
-
-type Options func(*options)
-
-func newOptions(opts ...Options) *options {
-	p := new(options)
-	p.defaultInterval = time.Second * 10
-	p.ApplyOptions(opts...)
 	return p
 }
 
-func (opt *options) ApplyOptions(opts ...Options) {
-	for _, fn := range opts {
-		fn(opt)
-	}
-}
-func (opt *options) GetInterval() time.Duration {
-	if opt.defaultInterval > 0 {
-		return opt.defaultInterval
-	}
-	return time.Second * 10
-}
-
 func WithOnetimeMode() Options {
-	return func(opt *options) {
-		opt.useOnetimeMode = true
+	return func(opt *Config) {
+		opt.Onetime = true
 	}
 }
 
 func WithIntervalMode() Options {
-	return func(opt *options) {
-		opt.useIntervalMode = true
+	return func(opt *Config) {
+		opt.Onetime = false
+		opt.Watch = false
 	}
 }
 
-func WithInterval(interval time.Duration) Options {
-	return func(opt *options) {
-		opt.defaultInterval = interval
+func WithInterval(interval int) Options {
+	return func(opt *Config) {
+		opt.Interval = interval
 	}
 }
 
 func WithWatchMode() Options {
-	return func(opt *options) {
-		opt.useWatchMode = true
+	return func(opt *Config) {
+		opt.Onetime = false
+		opt.Watch = true
 	}
 }
 
 func WithFuncMap(maps ...template.FuncMap) Options {
-	return func(opt *options) {
-		if opt.funcMap == nil {
-			opt.funcMap = make(template.FuncMap)
+	return func(opt *Config) {
+		if opt.FuncMap == nil {
+			opt.FuncMap = make(template.FuncMap)
 		}
 		for _, m := range maps {
 			for k, fn := range m {
-				opt.funcMap[k] = fn
+				opt.FuncMap[k] = fn
 			}
 		}
 	}
 }
 
 func WithAbsKeyAdjuster(fn func(absKey string) (realKey string)) Options {
-	return func(opt *options) {
-		opt.hookAbsKeyAdjuster = fn
+	return func(opt *Config) {
+		opt.HookAbsKeyAdjuster = fn
 	}
 }
 
 func WithFuncMapUpdater(funcMapUpdater ...func(m template.FuncMap)) Options {
-	return func(opt *options) {
-		opt.funcMapUpdater = append(opt.funcMapUpdater, funcMapUpdater...)
+	return func(opt *Config) {
+		opt.FuncMapUpdater = append(opt.FuncMapUpdater, funcMapUpdater...)
 	}
 }
 
 func WithHookBeforeCheckCmd(fn func(trName, cmd string, err error)) Options {
-	return func(opt *options) {
-		opt.hookBeforeCheckCmd = fn
+	return func(opt *Config) {
+		opt.HookBeforeCheckCmd = fn
 	}
 }
 
 func WithHookAfterCheckCmd(fn func(trName, cmd string, err error)) Options {
-	return func(opt *options) {
-		opt.hookAfterCheckCmd = fn
+	return func(opt *Config) {
+		opt.HookAfterCheckCmd = fn
 	}
 }
 
 func WithHookBeforeReloadCmd(fn func(trName, cmd string, err error)) Options {
-	return func(opt *options) {
-		opt.hookBeforeReloadCmd = fn
+	return func(opt *Config) {
+		opt.HookBeforeReloadCmd = fn
 	}
 }
 
 func WithHookAfterReloadCmd(fn func(trName, cmd string, err error)) Options {
-	return func(opt *options) {
-		opt.hookAfterReloadCmd = fn
+	return func(opt *Config) {
+		opt.HookAfterReloadCmd = fn
 	}
 }
 
 func WithHookError(fn func(trName string, err error)) Options {
-	return func(opt *options) {
-		opt.hookError = fn
-	}
-}
-
-func WithCloseChan(ch chan bool) Options {
-	return func(opt *options) {
-		opt.closeChan = ch
+	return func(opt *Config) {
+		opt.HookError = fn
 	}
 }

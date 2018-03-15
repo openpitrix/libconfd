@@ -14,7 +14,6 @@ import (
 type Call struct {
 	Config *Config
 	Client Client
-	Opts   []Options
 	Error  error
 	Done   chan *Call
 }
@@ -124,9 +123,8 @@ func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 
 	call := new(Call)
 
-	call.Config = cfg.Clone()
+	call.Config = cfg.Clone().applyOptions(opts...)
 	call.Client = client
-	call.Opts = append(cfg.Options(), opts...)
 	call.Done = make(chan *Call, 10) // buffered.
 
 	if err := cfg.Valid(); err != nil {
@@ -162,27 +160,17 @@ func (p *Processor) Close() error {
 }
 
 func (p *Processor) process(call *Call) {
-	opt := newOptions(call.Opts...)
-
 	switch {
-	case opt.useOnetimeMode:
+	case call.Config.Onetime:
 		p.runOnce(call)
-	case opt.useIntervalMode:
+	case call.Config.Watch:
 		p.runInIntervalMode(call)
-	case opt.useWatchMode:
-		p.runInWatchMode(call)
 	default:
-		if call.Client.WatchEnabled() {
-			p.runInWatchMode(call)
-		} else {
-			p.runInIntervalMode(call)
-		}
+		p.runInWatchMode(call)
 	}
 }
 
 func (p *Processor) runOnce(call *Call) {
-	opt := newOptions(call.Opts...)
-
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
 		logger.Error(err)
@@ -191,11 +179,11 @@ func (p *Processor) runOnce(call *Call) {
 	}
 
 	for _, t := range ts {
-		if p.isClosing() || opt.isClosing() {
+		if p.isClosing() {
 			return
 		}
 
-		if err := t.Process(call.Opts...); err != nil {
+		if err := t.Process(call); err != nil {
 			logger.Error(err)
 		}
 	}
@@ -204,10 +192,9 @@ func (p *Processor) runOnce(call *Call) {
 }
 
 func (p *Processor) runInIntervalMode(call *Call) {
-	opt := newOptions(call.Opts...)
 
 	for {
-		if p.isClosing() || opt.isClosing() {
+		if p.isClosing() {
 			return
 		}
 
@@ -223,19 +210,17 @@ func (p *Processor) runInIntervalMode(call *Call) {
 				return
 			}
 
-			if err := t.Process(call.Opts...); err != nil {
+			if err := t.Process(call); err != nil {
 				logger.Error(err)
 				continue
 			}
 		}
 
-		time.Sleep(opt.GetInterval())
+		time.Sleep(time.Duration(call.Config.Interval) * time.Second)
 	}
 }
 
 func (p *Processor) runInWatchMode(call *Call) {
-	opt := newOptions(call.Opts...)
-
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
 		logger.Warning(err)
@@ -249,14 +234,14 @@ func (p *Processor) runInWatchMode(call *Call) {
 		wg.Add(1)
 		go func(t *TemplateResourceProcessor) {
 			defer wg.Done()
-			p.monitorPrefix(t, &wg, stopChan, call.Opts...)
+			p.monitorPrefix(t, &wg, stopChan, call)
 		}(ts[i])
 	}
 
 	for {
 		time.Sleep(time.Second / 2)
 
-		if p.isClosing() || opt.isClosing() {
+		if p.isClosing() {
 			close(stopChan)
 			break
 		}
@@ -269,13 +254,12 @@ func (p *Processor) runInWatchMode(call *Call) {
 func (p *Processor) monitorPrefix(
 	t *TemplateResourceProcessor,
 	wg *sync.WaitGroup, stopChan chan bool,
-	opts ...Options,
+	call *Call,
 ) {
-	opt := newOptions(opts...)
 	keys := t.getAbsKeys()
 
 	for {
-		if p.isClosing() || opt.isClosing() {
+		if p.isClosing() {
 			return
 		}
 
@@ -285,7 +269,7 @@ func (p *Processor) monitorPrefix(
 		}
 
 		t.lastIndex = index
-		if err := t.Process(opts...); err != nil {
+		if err := t.Process(call); err != nil {
 			logger.Error(err)
 		}
 	}

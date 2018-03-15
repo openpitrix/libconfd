@@ -6,11 +6,10 @@ package libconfd
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
+	"text/template"
 
 	"github.com/BurntSushi/toml"
 )
@@ -42,36 +41,30 @@ type Config struct {
 	// DEBUG/INFO/WARN/ERROR/PANIC
 	LogLevel string `toml:"log-level"`
 
+	// the TOML backend file to watch for changes
+	File string `toml:"file"`
+
 	// run once and exit
 	Onetime bool `toml:"onetime"`
 
 	// enable watch support
 	Watch bool `toml:"watch"`
 
-	// the TOML backend file to watch for changes
-	File string `toml:"file"`
-
 	// keep staged files
 	KeepStageFile bool `toml:"keep-stage-file"`
 
 	// PGP secret keyring (for use with crypt functions)
 	PGPPrivateKey string `toml:"pgp-private-key"`
-}
 
-func (p *Config) Options() (opts []Options) {
-	if p.Interval >= 0 {
-		opts = append(opts, WithInterval(time.Duration(p.Interval)*time.Second))
-	}
+	FuncMap        template.FuncMap           `toml:"-"`
+	FuncMapUpdater []func(m template.FuncMap) `toml:"-"`
 
-	if p.Watch {
-		opts = append(opts, WithIntervalMode())
-	}
-
-	if p.Onetime {
-		opts = append(opts, WithOnetimeMode())
-	}
-
-	return
+	HookAbsKeyAdjuster  func(absKey string) (realKey string) `toml:"-"`
+	HookBeforeCheckCmd  func(trName, cmd string, err error)  `toml:"-"`
+	HookAfterCheckCmd   func(trName, cmd string, err error)  `toml:"-"`
+	HookBeforeReloadCmd func(trName, cmd string, err error)  `toml:"-"`
+	HookAfterReloadCmd  func(trName, cmd string, err error)  `toml:"-"`
+	HookError           func(trName string, err error)       `toml:"-"`
 }
 
 const defaultConfigContent = `
@@ -216,22 +209,21 @@ func (p *Config) Save(name string) error {
 }
 
 func (p *Config) Clone() *Config {
-	var (
-		q   = new(Config)
-		buf bytes.Buffer
-	)
+	q := *p
 
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
+	// clone slice
+	q.IgnoredList = append([]string{}, p.IgnoredList...)
+	q.FuncMapUpdater = append([]func(m template.FuncMap){}, p.FuncMapUpdater...)
 
-	if err := enc.Encode(p); err != nil {
-		logger.Fatal(err)
+	// clone map
+	if p.FuncMap != nil {
+		q.FuncMap = make(template.FuncMap)
+		for k, v := range p.FuncMap {
+			q.FuncMap[k] = v
+		}
 	}
-	if err := dec.Decode(q); err != nil {
-		logger.Fatal(err)
-	}
 
-	return q
+	return &q
 }
 
 func (p *Config) GetConfigDir() string {
