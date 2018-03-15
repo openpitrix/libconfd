@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/chai2010/libconfd"
+	"openpitrix.io/libconfd"
 )
 
 func Example() {

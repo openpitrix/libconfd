@@ -9,7 +9,7 @@ package main
 import (
 	"flag"
 
-	"github.com/chai2010/libconfd"
+	"openpitrix.io/libconfd"
 )
 
 var (

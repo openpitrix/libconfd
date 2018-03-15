@@ -2,7 +2,7 @@
 // Use of this source code is governed by a Apache license
 // that can be found in the LICENSE file.
 
-module "github.com/chai2010/libconfd"
+module "openpitrix.io/libconfd"
 
 require (
 	"github.com/BurntSushi/toml" v0.3.0

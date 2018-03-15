@@ -9,7 +9,7 @@ go:
   - 1.9
   - tip
 
-go_import_path: github.com/chai2010/libconfd
+go_import_path: openpitrix.io/libconfd
 
 before_install:
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
