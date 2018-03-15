@@ -22,6 +22,9 @@ type Config struct {
 	//
 	ConfDir string `toml:"confdir"`
 
+	// Ignored template name list
+	IgnoredList []string `toml:"ignored"`
+
 	// The backend polling interval in seconds. (10)
 	Interval int `toml:"interval"`
 
@@ -58,6 +61,9 @@ const defaultConfigContent = `
 # abspath = filepath.Join(ConfigPath, Config.ConfDir)
 #
 confdir = "confd"
+
+# Ignored template name list
+ignored = ["ignored.tmpl"]
 
 # The backend polling interval in seconds. (10)
 interval = 10
@@ -159,7 +165,7 @@ func (p *Config) Valid() error {
 	}
 
 	if p.Interval < 0 {
-		return fmt.Errorf("invalid Interval: %s", p.Interval)
+		return fmt.Errorf("invalid Interval: %d", p.Interval)
 	}
 	if !newLogLevel(p.LogLevel).Valid() {
 		return fmt.Errorf("invalid LogLevel: %s", p.LogLevel)

@@ -77,3 +77,12 @@ func getFuncName(skips ...int) string {
 	}
 	return name
 }
+
+func strInStrList(s string, ss []string) bool {
+	for _, t := range ss {
+		if s == t {
+			return true
+		}
+	}
+	return false
+}

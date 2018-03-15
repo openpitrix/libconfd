@@ -14,12 +14,17 @@ func TestNewDefaultConfig(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
+	tConfig := newDefaultConfig()
+
 	p, err := LoadConfig("confd.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tConfig := newDefaultConfig()
+	// ignord Ignored fileds
+	tConfig.IgnoredList = nil
+	p.IgnoredList = nil
+
 	if !reflect.DeepEqual(p, tConfig) {
 		t.Fatalf("expect = %#v, got = %#v", tConfig, p)
 	}

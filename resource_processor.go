@@ -51,6 +51,23 @@ func MakeAllTemplateResourceProcessor(
 		return nil, err
 	}
 
+	// skip ignored template
+	paths = func() []string {
+		if len(config.IgnoredList) == 0 {
+			return paths
+		}
+		var ss []string
+		for _, s := range paths {
+			if strInStrList(
+				strings.TrimSuffix(filepath.Base(s), ".toml"),
+				config.IgnoredList,
+			) {
+				ss = append(ss, s)
+			}
+		}
+		return ss
+	}()
+
 	logger.Debugln("paths:", paths)
 
 	if len(paths) == 0 {

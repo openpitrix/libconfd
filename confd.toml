@@ -9,6 +9,9 @@
 #
 confdir = "./confd"
 
+# Ignored template name list
+ignored = ["ignored.tmpl"]
+
 # The backend polling interval in seconds. (10)
 interval = 10
 
