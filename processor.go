@@ -130,6 +130,8 @@ func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 		return call
 	}
 
+	logger.SetLevel(cfg.LogLevel)
+
 	p.addPendingCall(call)
 	return call
 }
@@ -141,6 +143,8 @@ func (p *Processor) Run(cfg *Config, client Client, opts ...Options) error {
 	if client == nil {
 		logger.Panic("client is nil")
 	}
+
+	logger.SetLevel(cfg.LogLevel)
 
 	call := <-p.Go(cfg, client, opts...).Done
 	return call.Error
