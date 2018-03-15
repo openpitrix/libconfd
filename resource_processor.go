@@ -58,7 +58,7 @@ func MakeAllTemplateResourceProcessor(
 		}
 		var ss []string
 		for _, s := range paths {
-			if strInStrList(
+			if !strInStrList(
 				strings.TrimSuffix(filepath.Base(s), ".toml"),
 				config.IgnoredList,
 			) {
@@ -299,6 +299,7 @@ func (p *TemplateResourceProcessor) sync(opt *options) error {
 	isSame, err := p.checkSameConfig(staged, p.Dest)
 	if err != nil {
 		logger.Warning(err)
+		return err
 	}
 
 	if p.noop {
@@ -415,25 +416,19 @@ func (_ *TemplateResourceProcessor) runCommand(cmd string) error {
 func (_ *TemplateResourceProcessor) checkSameConfig(src, dest string) (bool, error) {
 	d, err := readFileStat(dest)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
 		return false, err
 	}
+
 	s, err := readFileStat(src)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
-	if d.Uid != s.Uid {
-		return false, fmt.Errorf("%s has UID %d should be %d", dest, d.Uid, s.Uid)
-	}
-	if d.Gid != s.Gid {
-		return false, fmt.Errorf("%s has GID %d should be %d", dest, d.Gid, s.Gid)
-	}
-	if d.Mode != s.Mode {
-		return false, fmt.Errorf("%s has mode %s should be %s", dest, os.FileMode(d.Mode), os.FileMode(s.Mode))
-	}
-	if d.Md5 != s.Md5 {
-		return false, fmt.Errorf("%s has md5sum %s should be %s", dest, d.Md5, s.Md5)
-	}
-
-	return true, nil
+	return d == s, nil
 }

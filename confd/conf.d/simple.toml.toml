@@ -1,0 +1,11 @@
+[template]
+src = "simple.toml.tmpl"
+dest = "simple.toml"
+
+check_cmd = """
+	echo simple.toml check_cmd
+"""
+
+reload_cmd = """
+	echo simple.toml reload_cmd
+"""

@@ -10,7 +10,12 @@
 confdir = "./confd"
 
 # Ignored template name list
-ignored = ["ignored.tmpl"]
+ignored = [
+	"ignored.xml",
+	"catalina_start.sh",
+	"server.xml",
+	"tomcat-users.xml",
+]
 
 # The backend polling interval in seconds. (10)
 interval = 10
@@ -26,6 +31,9 @@ sync-only = true
 
 # level which confd should log messages ("DEBUG")
 log-level = "DEBUG"
+
+# run once and exit
+onetime = true
 
 # enable watch support
 watch = false

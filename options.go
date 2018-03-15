@@ -42,7 +42,7 @@ type Options func(*options)
 
 func newOptions(opts ...Options) *options {
 	p := new(options)
-	p.defaultInterval = time.Second * 600
+	p.defaultInterval = time.Second * 10
 	p.ApplyOptions(opts...)
 	return p
 }
@@ -56,7 +56,7 @@ func (opt *options) GetInterval() time.Duration {
 	if opt.defaultInterval > 0 {
 		return opt.defaultInterval
 	}
-	return time.Second * 600
+	return time.Second * 10
 }
 
 func WithOnetimeMode() Options {

@@ -104,6 +104,11 @@ func NewProcessor() *Processor {
 			p.wg.Add(1)
 			go func() {
 				defer p.wg.Done()
+				defer call.done()
+
+				logger.Debugln("process start")
+				defer logger.Debugln("process done")
+
 				p.process(call)
 			}()
 		}
@@ -121,7 +126,7 @@ func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 
 	call.Config = cfg.Clone()
 	call.Client = client
-	call.Opts = append([]Options{}, opts...)
+	call.Opts = append(cfg.Options(), opts...)
 	call.Done = make(chan *Call, 10) // buffered.
 
 	if err := cfg.Valid(); err != nil {

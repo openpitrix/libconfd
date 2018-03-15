@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -41,6 +42,9 @@ type Config struct {
 	// DEBUG/INFO/WARN/ERROR/PANIC
 	LogLevel string `toml:"log-level"`
 
+	// run once and exit
+	Onetime bool `toml:"onetime"`
+
 	// enable watch support
 	Watch bool `toml:"watch"`
 
@@ -54,6 +58,22 @@ type Config struct {
 	PGPPrivateKey string `toml:"pgp-private-key"`
 }
 
+func (p *Config) Options() (opts []Options) {
+	if p.Interval >= 0 {
+		opts = append(opts, WithInterval(time.Duration(p.Interval)*time.Second))
+	}
+
+	if p.Watch {
+		opts = append(opts, WithIntervalMode())
+	}
+
+	if p.Onetime {
+		opts = append(opts, WithOnetimeMode())
+	}
+
+	return
+}
+
 const defaultConfigContent = `
 # The path to confd configs.
 # If the confdir is rel path, must convert to abs path.
@@ -63,7 +83,7 @@ const defaultConfigContent = `
 confdir = "confd"
 
 # Ignored template name list
-ignored = ["ignored.tmpl"]
+ignored = ["ignored.xml"]
 
 # The backend polling interval in seconds. (10)
 interval = 10
@@ -79,6 +99,9 @@ sync-only = true
 
 # level which confd should log messages ("DEBUG")
 log-level = "DEBUG"
+
+# run once and exit
+onetime = true
 
 # enable watch support
 watch = false
