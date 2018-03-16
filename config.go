@@ -61,12 +61,10 @@ type Config struct {
 	FuncMap        template.FuncMap           `toml:"-" json:"-"`
 	FuncMapUpdater []func(m template.FuncMap) `toml:"-" json:"-"`
 
-	HookAbsKeyAdjuster  func(absKey string) (realKey string) `toml:"-" json:"-"`
-	HookBeforeCheckCmd  func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookAfterCheckCmd   func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookBeforeReloadCmd func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookAfterReloadCmd  func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookError           func(trName string, err error)       `toml:"-" json:"-"`
+	HookAbsKeyAdjuster   func(absKey string) (realKey string) `toml:"-" json:"-"`
+	HookOnCheckCmdError  func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookOnReloadCmdError func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookOnError          func(trName string, err error)       `toml:"-" json:"-"`
 }
 
 const defaultConfigContent = `

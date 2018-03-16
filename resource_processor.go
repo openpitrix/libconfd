@@ -22,6 +22,7 @@ import (
 type TemplateResourceProcessor struct {
 	TemplateResource
 
+	path          string
 	client        Client
 	store         *KVStore
 	stageFile     *os.File
@@ -116,6 +117,7 @@ func NewTemplateResourceProcessor(
 		TemplateResource: *res,
 	}
 
+	tr.path = path
 	tr.client = client
 	tr.store = NewKVStore()
 	tr.keepStageFile = config.KeepStageFile
@@ -165,7 +167,15 @@ func NewTemplateResourceProcessor(
 // from the store, then we stage a candidate configuration file, and finally sync
 // things up.
 // It returns an error if any.
-func (p *TemplateResourceProcessor) Process(call *Call) error {
+func (p *TemplateResourceProcessor) Process(call *Call) (err error) {
+	if fn := call.Config.HookOnError; fn != nil {
+		defer func() {
+			if err != nil {
+				fn(p.path, err)
+			}
+		}()
+	}
+
 	if len(call.Config.FuncMap) > 0 {
 		for k, fn := range call.Config.FuncMap {
 			p.funcMap[k] = fn
@@ -220,6 +230,12 @@ func (p *TemplateResourceProcessor) setVars(call *Call) error {
 
 	absKeys := p.getAbsKeys()
 	logger.Debugf("absKeys: %#v\n", absKeys)
+
+	if fn := call.Config.HookAbsKeyAdjuster; fn != nil {
+		for i, key := range absKeys {
+			absKeys[i] = fn(key)
+		}
+	}
 
 	values, err := p.client.GetValues(absKeys)
 	if err != nil {
@@ -311,8 +327,7 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 
 	logger.Info("Target config " + p.Dest + " out of sync")
 	if !p.syncOnly && strings.TrimSpace(p.CheckCmd) != "" {
-		// TODO: support hook
-		if err := p.doCheckCmd(); err != nil {
+		if err := p.doCheckCmd(call); err != nil {
 			return fmt.Errorf("Config check failed: %v", err)
 		}
 	}
@@ -345,8 +360,7 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 	}
 
 	if !p.syncOnly && strings.TrimSpace(p.ReloadCmd) != "" {
-		// TODO: support hook
-		if err := p.doReloadCmd(); err != nil {
+		if err := p.doReloadCmd(call); err != nil {
 			return err
 		}
 	}
@@ -361,7 +375,15 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 // check to be run on the staged file before overwriting the destination config
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
-func (p *TemplateResourceProcessor) doCheckCmd() error {
+func (p *TemplateResourceProcessor) doCheckCmd(call *Call) (err error) {
+	if fn := call.Config.HookOnCheckCmdError; fn != nil {
+		defer func() {
+			if err != nil {
+				fn(p.path, p.CheckCmd, err)
+			}
+		}()
+	}
+
 	var cmdBuffer bytes.Buffer
 	data := make(map[string]string)
 	data["src"] = p.stageFile.Name()
@@ -377,7 +399,15 @@ func (p *TemplateResourceProcessor) doCheckCmd() error {
 
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
-func (p *TemplateResourceProcessor) doReloadCmd() error {
+func (p *TemplateResourceProcessor) doReloadCmd(call *Call) (err error) {
+	if fn := call.Config.HookOnReloadCmdError; fn != nil {
+		defer func() {
+			if err != nil {
+				fn(p.path, p.ReloadCmd, err)
+			}
+		}()
+	}
+
 	return p.runCommand(p.ReloadCmd)
 }
 
