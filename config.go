@@ -20,51 +20,53 @@ type Config struct {
 	//
 	// abspath = filepath.Join(ConfigPath, Config.ConfDir)
 	//
-	ConfDir string `toml:"confdir"`
+	ConfDir string `toml:"confdir" json:"confdir"`
 
 	// Ignored template name list
-	IgnoredList []string `toml:"ignored"`
+	IgnoredList []string `toml:"ignored" json:"ignored"`
 
 	// The backend polling interval in seconds. (10)
-	Interval int `toml:"interval"`
+	Interval int `toml:"interval" json:"interval"`
 
 	// Enable noop mode. Process all template resources; skip target update.
-	Noop bool `toml:"noop"`
+	Noop bool `toml:"noop" json:"noop"`
 
 	// The string to prefix to keys. ("/")
-	Prefix string `toml:"prefix"`
+	Prefix string `toml:"prefix" json:"prefix"`
 
 	// sync without check_cmd and reload_cmd.
-	SyncOnly bool `toml:"sync-only"`
+	SyncOnly bool `toml:"sync-only" json:"sync-only"`
 
 	// level which confd should log messages
 	// DEBUG/INFO/WARN/ERROR/PANIC
-	LogLevel string `toml:"log-level"`
+	LogLevel string `toml:"log-level" json:"log-level"`
 
 	// the TOML backend file to watch for changes
-	File string `toml:"file"`
+	File string `toml:"file" json:"file"`
 
 	// run once and exit
-	Onetime bool `toml:"onetime"`
+	Onetime bool `toml:"onetime" json:"onetime"`
 
 	// enable watch support
-	Watch bool `toml:"watch"`
+	Watch bool `toml:"watch" json:"watch"`
 
 	// keep staged files
-	KeepStageFile bool `toml:"keep-stage-file"`
+	KeepStageFile bool `toml:"keep-stage-file" json:"keep-stage-file"`
 
 	// PGP secret keyring (for use with crypt functions)
-	PGPPrivateKey string `toml:"pgp-private-key"`
+	PGPPrivateKey string `toml:"pgp-private-key" json:"pgp-private-key"`
 
-	FuncMap        template.FuncMap           `toml:"-"`
-	FuncMapUpdater []func(m template.FuncMap) `toml:"-"`
+	// ----------------------------------------------------
 
-	HookAbsKeyAdjuster  func(absKey string) (realKey string) `toml:"-"`
-	HookBeforeCheckCmd  func(trName, cmd string, err error)  `toml:"-"`
-	HookAfterCheckCmd   func(trName, cmd string, err error)  `toml:"-"`
-	HookBeforeReloadCmd func(trName, cmd string, err error)  `toml:"-"`
-	HookAfterReloadCmd  func(trName, cmd string, err error)  `toml:"-"`
-	HookError           func(trName string, err error)       `toml:"-"`
+	FuncMap        template.FuncMap           `toml:"-" json:"-"`
+	FuncMapUpdater []func(m template.FuncMap) `toml:"-" json:"-"`
+
+	HookAbsKeyAdjuster  func(absKey string) (realKey string) `toml:"-" json:"-"`
+	HookBeforeCheckCmd  func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookAfterCheckCmd   func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookBeforeReloadCmd func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookAfterReloadCmd  func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookError           func(trName string, err error)       `toml:"-" json:"-"`
 }
 
 const defaultConfigContent = `
