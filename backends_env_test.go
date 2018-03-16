@@ -58,7 +58,6 @@ func (_ *tEnvClient) GetValues(keys []string) (map[string]string, error) {
 		}
 	}
 
-	logger.Debugf("Key Map: %#v", vars)
 	return vars, nil
 }
 

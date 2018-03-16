@@ -25,7 +25,7 @@ func (call *Call) done() {
 	default:
 		// We don't want to block here. It is the caller's responsibility to make
 		// sure the channel has enough buffer space. See comment in Go().
-		logger.Debugln("rpc: discarding Call reply due to insufficient Done chan capacity")
+		logger.Debugln("libconfd: discarding Call reply due to insufficient Done chan capacity")
 	}
 }
 
@@ -79,6 +79,11 @@ func (p *Processor) clearPendingCall() {
 	p.pending = p.pending[:0]
 }
 
+func (p *Processor) checkBackendClient(client Client) error {
+	_, err := client.GetValues([]string{"/"})
+	return err
+}
+
 func NewProcessor() *Processor {
 	p := &Processor{
 		closeChan: make(chan bool),
@@ -102,11 +107,11 @@ func NewProcessor() *Processor {
 
 			p.wg.Add(1)
 			go func() {
-				defer p.wg.Done()
-				defer call.done()
-
 				logger.Debugln("process start")
 				defer logger.Debugln("process done")
+
+				defer p.wg.Done()
+				defer call.done()
 
 				p.process(call)
 			}()
@@ -134,6 +139,12 @@ func (p *Processor) Go(cfg *Config, client Client, opts ...Options) *Call {
 	}
 
 	logger.SetLevel(cfg.LogLevel)
+
+	if err := p.checkBackendClient(client); err != nil {
+		call.Error = err
+		call.done()
+		return call
+	}
 
 	p.addPendingCall(call)
 	return call

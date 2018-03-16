@@ -148,7 +148,6 @@ func LoadConfig(path string) (p *Config, err error) {
 	}
 	if !filepath.IsAbs(p.ConfDir) {
 		absdir, err := filepath.Abs(filepath.Dir(path))
-		logger.Debugln(absdir)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +155,6 @@ func LoadConfig(path string) (p *Config, err error) {
 	}
 	if p.File != "" && !filepath.IsAbs(p.File) {
 		absdir, err := filepath.Abs(filepath.Dir(path))
-		logger.Debugln(absdir)
 		if err != nil {
 			return nil, err
 		}
