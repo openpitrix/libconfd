@@ -1,6 +1,6 @@
-// Copyright confd. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE-confd file.
+// Copyright 2018 The OpenPitrix Authors. All rights reserved.
+// Use of this source code is governed by a Apache license
+// that can be found in the LICENSE file.
 
 // Package libconfd provides mini confd lib.
 package libconfd
@@ -175,9 +175,9 @@ func (p *Processor) process(call *Call) {
 	case call.Config.Onetime:
 		p.runOnce(call)
 	case call.Config.Watch:
-		p.runInIntervalMode(call)
-	default:
 		p.runInWatchMode(call)
+	default:
+		p.runInIntervalMode(call)
 	}
 }
 
@@ -203,16 +203,15 @@ func (p *Processor) runOnce(call *Call) {
 }
 
 func (p *Processor) runInIntervalMode(call *Call) {
+	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
+	if err != nil {
+		logger.Warning(err)
+		call.Error = err
+		return
+	}
 
 	for {
 		if p.isClosing() {
-			return
-		}
-
-		ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
-		if err != nil {
-			logger.Warning(err)
-			call.Error = err
 			return
 		}
 
