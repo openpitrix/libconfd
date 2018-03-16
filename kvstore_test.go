@@ -101,17 +101,17 @@ var tKVStore_getalltests = []struct {
 }{
 	{"/app/db/*", nil,
 		[]KVPair{
-			KVPair{"/app/db/pass", "foo"},
-			KVPair{"/app/db/user", "admin"}}},
+			{"/app/db/pass", "foo"},
+			{"/app/db/user", "admin"}}},
 	{"/app/*/host1", nil,
 		[]KVPair{
-			KVPair{"/app/upstream/host1", "203.0.113.0.1:8080"},
-			KVPair{"/app/vhosts/host1", "app.example.com"}}},
+			{"/app/upstream/host1", "203.0.113.0.1:8080"},
+			{"/app/vhosts/host1", "app.example.com"}}},
 
 	{"/app/upstream/*", nil,
 		[]KVPair{
-			KVPair{"/app/upstream/host1", "203.0.113.0.1:8080"},
-			KVPair{"/app/upstream/host2", "203.0.113.0.2:8080"}}},
+			{"/app/upstream/host1", "203.0.113.0.1:8080"},
+			{"/app/upstream/host2", "203.0.113.0.2:8080"}}},
 	{"[]a]", path.ErrBadPattern, nil},
 	{"/app/missing/*", nil, []KVPair{}},
 }

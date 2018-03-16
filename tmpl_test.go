@@ -121,7 +121,7 @@ type tTemplateTest struct {
 // processed, they should produce a config file matching expected.
 var tTemplateTests = []tTemplateTest{
 
-	tTemplateTest{
+	{
 		desc: "base, get test",
 		toml: `
 [template]
@@ -148,7 +148,7 @@ val: abc
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "base, cget test",
 		toml: `
 [template]
@@ -179,7 +179,7 @@ val: abc
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "gets test",
 		toml: `
 [template]
@@ -213,7 +213,7 @@ val: mary
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "cgets test",
 		toml: `
 [template]
@@ -261,7 +261,7 @@ val: mary
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "getv test",
 		toml: `
 [template]
@@ -286,7 +286,7 @@ user = bob
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "cgetv test",
 		toml: `
 [template]
@@ -319,7 +319,7 @@ user = bob
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "getvs test",
 		toml: `
 [template]
@@ -350,7 +350,7 @@ val: mary
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "cgetvs test",
 		toml: `
 [template]
@@ -393,7 +393,7 @@ val: mary
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "split test",
 		toml: `
 [template]
@@ -420,7 +420,7 @@ bz: baz
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "toUpper test",
 		toml: `
 [template]
@@ -443,7 +443,7 @@ key: VALUE
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "toLower test",
 		toml: `
 [template]
@@ -466,7 +466,7 @@ key: value
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "json test",
 		toml: `
 [template]
@@ -500,7 +500,7 @@ ip: 192.168.10.12
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "jsonArray test",
 		toml: `
 [template]
@@ -529,7 +529,7 @@ num: 3
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "ls test",
 		toml: `
 [template]
@@ -562,7 +562,7 @@ value: ghi
 		},
 	},
 
-	tTemplateTest{
+	{
 		desc: "lsdir test",
 		toml: `
 [template]
@@ -592,7 +592,7 @@ value: jkl
 			tr.store.Set("/test/data/jkl/mno", "789")
 		},
 	},
-	tTemplateTest{
+	{
 		desc: "dir test",
 		toml: `
 [template]
@@ -618,7 +618,7 @@ dir: /test/data
 			tr.store.Set("/test/data/def", "child")
 		},
 	},
-	tTemplateTest{
+	{
 		desc: "ip lookup test",
 		toml: `
 [template]
@@ -644,7 +644,7 @@ ip: 127.0.0.1
 			tr.store.Set("/test/data/def", "child")
 		},
 	},
-	tTemplateTest{
+	{
 		desc: "base64Encode test",
 		toml: `
 [template]
@@ -666,7 +666,7 @@ key: VmFsdWU=
 			tr.store.Set("/test/data", `Value`)
 		},
 	},
-	tTemplateTest{
+	{
 		desc: "base64Decode test",
 		toml: `
 [template]
@@ -687,7 +687,7 @@ key: Value
 		updateStore: func(tr *TemplateResource) {
 			tr.store.Set("/test/data", `VmFsdWU=`)
 		},
-	}, tTemplateTest{
+	}, {
 		desc: "seq test",
 		toml: `
 [template]
@@ -701,7 +701,7 @@ dest = "./tmp/test.conf"
 [1 2 3]
 `,
 		updateStore: func(tr *TemplateResource) {},
-	}, tTemplateTest{
+	}, {
 		desc: "atoi test",
 		toml: `
 	[template]
