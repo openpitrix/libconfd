@@ -29,8 +29,8 @@ type TemplateFunc struct {
 
 var _TemplateFunc_initFuncMap func(p *TemplateFunc) = nil
 
-func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
-	p := TemplateFunc{
+func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) *TemplateFunc {
+	p := &TemplateFunc{
 		FuncMap:       map[string]interface{}{},
 		Store:         store,
 		PGPPrivateKey: pgpPrivateKey,
@@ -40,7 +40,7 @@ func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) TemplateFunc {
 		logger.Panic("_TemplateFunc_initFuncMap missing")
 	}
 
-	_TemplateFunc_initFuncMap(&p)
+	_TemplateFunc_initFuncMap(p)
 	return p
 }
 

@@ -58,8 +58,8 @@ type Config struct {
 
 	// ----------------------------------------------------
 
-	FuncMap        template.FuncMap           `toml:"-" json:"-"`
-	FuncMapUpdater []func(m template.FuncMap) `toml:"-" json:"-"`
+	FuncMap        template.FuncMap                               `toml:"-" json:"-"`
+	FuncMapUpdater func(m template.FuncMap, basefn *TemplateFunc) `toml:"-" json:"-"`
 
 	HookAbsKeyAdjuster   func(absKey string) (realKey string) `toml:"-" json:"-"`
 	HookOnCheckCmdError  func(trName, cmd string, err error)  `toml:"-" json:"-"`
@@ -211,7 +211,6 @@ func (p *Config) Clone() *Config {
 
 	// clone slice
 	q.IgnoredList = append([]string{}, p.IgnoredList...)
-	q.FuncMapUpdater = append([]func(m template.FuncMap){}, p.FuncMapUpdater...)
 
 	// clone map
 	if p.FuncMap != nil {

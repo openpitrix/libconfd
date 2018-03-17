@@ -26,6 +26,7 @@ type TemplateResourceProcessor struct {
 	client        Client
 	store         *KVStore
 	stageFile     *os.File
+	templateFunc  *TemplateFunc
 	funcMap       template.FuncMap
 	keepStageFile bool
 	lastIndex     uint64
@@ -156,7 +157,8 @@ func NewTemplateResourceProcessor(
 		tr.Gid = os.Getegid()
 	}
 
-	tr.funcMap = NewTemplateFunc(tr.store, tr.PGPPrivateKey).FuncMap
+	tr.templateFunc = NewTemplateFunc(tr.store, tr.PGPPrivateKey)
+	tr.funcMap = tr.templateFunc.FuncMap
 	tr.Src = filepath.Join(config.GetTemplateDir(), tr.Src)
 
 	return &tr, nil
@@ -181,10 +183,8 @@ func (p *TemplateResourceProcessor) Process(call *Call) (err error) {
 			p.funcMap[k] = fn
 		}
 	}
-	if len(call.Config.FuncMapUpdater) > 0 {
-		for _, fn := range call.Config.FuncMapUpdater {
-			fn(p.funcMap)
-		}
+	if fn := call.Config.FuncMapUpdater; fn != nil {
+		fn(p.funcMap, p.templateFunc)
 	}
 
 	if err := p.setFileMode(call); err != nil {

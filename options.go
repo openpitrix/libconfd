@@ -62,9 +62,9 @@ func WithAbsKeyAdjuster(fn func(absKey string) (realKey string)) Options {
 	}
 }
 
-func WithFuncMapUpdater(funcMapUpdater ...func(m template.FuncMap)) Options {
+func WithFuncMapUpdater(fn func(m template.FuncMap, basefn *TemplateFunc)) Options {
 	return func(opt *Config) {
-		opt.FuncMapUpdater = append(opt.FuncMapUpdater, funcMapUpdater...)
+		opt.FuncMapUpdater = fn
 	}
 }
 
