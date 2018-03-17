@@ -159,7 +159,15 @@ func NewTemplateResourceProcessor(
 
 	tr.templateFunc = NewTemplateFunc(tr.store, tr.PGPPrivateKey)
 	tr.funcMap = tr.templateFunc.FuncMap
-	tr.Src = filepath.Join(config.GetTemplateDir(), tr.Src)
+
+	if !filepath.IsAbs(tr.Src) {
+		tr.Src = filepath.Join(config.GetTemplateDir(), tr.Src)
+	}
+
+	// replace ${LIBCONFD_CONFDIR}
+	tr.Dest = strings.Replace(tr.Dest, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
+	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
+	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 
 	return &tr, nil
 }
