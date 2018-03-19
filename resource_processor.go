@@ -19,6 +19,16 @@ import (
 	"text/template"
 )
 
+var _LIBCONFD_GOOS = func() string {
+	if s := os.Getenv("LIBCONFD_GOOS"); s != "" {
+		return s
+	}
+	if s := os.Getenv("GOOS"); s != "" {
+		return s
+	}
+	return runtime.GOOS
+}()
+
 type TemplateResourceProcessor struct {
 	TemplateResource
 
@@ -57,15 +67,15 @@ func MakeAllTemplateResourceProcessor(
 
 		switch {
 		case strings.HasSuffix(path, ".darwin.toml"):
-			if runtime.GOOS != "darwin" {
+			if _LIBCONFD_GOOS != "darwin" {
 				return false
 			}
 		case strings.HasSuffix(path, ".linux.toml"):
-			if runtime.GOOS != "linux" {
+			if _LIBCONFD_GOOS != "linux" {
 				return false
 			}
 		case strings.HasSuffix(path, ".windows.toml"):
-			if runtime.GOOS != "windows" {
+			if _LIBCONFD_GOOS != "windows" {
 				return false
 			}
 		}
@@ -73,7 +83,7 @@ func MakeAllTemplateResourceProcessor(
 			if bytes.Contains(data, []byte("# +build ignore")) {
 				return false
 			}
-			if bytes.Contains(data, []byte("# +build "+runtime.GOOS)) {
+			if bytes.Contains(data, []byte("# +build "+_LIBCONFD_GOOS)) {
 				return true
 			}
 		}
@@ -465,6 +475,12 @@ func (_ *TemplateResourceProcessor) runCommand(cmd string) error {
 	cmd = strings.TrimSpace(cmd)
 
 	logger.Debug("TemplateResourceProcessor.runCommand: " + cmd)
+
+	if _LIBCONFD_GOOS != runtime.GOOS {
+		err := fmt.Errorf("cross GOOS(%s) donot support runCommand!", _LIBCONFD_GOOS)
+		logger.Error(err)
+		return err
+	}
 
 	var c *exec.Cmd
 	if runtime.GOOS == "windows" {
