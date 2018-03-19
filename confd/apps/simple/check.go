@@ -16,10 +16,10 @@ import (
 func checkConfigFile(path string) {
 	var p Config
 	if err := JsonLoad(path, &p); err != nil {
-		log.Fatalf("MustLoadConfig: JsonLoad: %v\n", err)
+		log.Fatalf("checkConfigFile: JsonLoad: %v\n", err)
 	}
 	if err := IsValidConfig(&p); err != nil {
-		log.Fatalf("MustLoadConfig: invalid config: %v\n", err)
+		log.Fatalf("checkConfigFile: invalid config: %v\n", err)
 	}
 
 	fmt.Println("OK")
