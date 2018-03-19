@@ -15,7 +15,7 @@ help:
 	@echo "  help     to show this help informatrion"
 
 .PHONY: check
-restart:
+check:
 	@echo "check todo"
 
 .PHONY: restart
