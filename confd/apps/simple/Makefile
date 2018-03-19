@@ -3,15 +3,16 @@
 # that can be found in the LICENSE file.
 
 TARG:=libconfd-simple-app
+KILL_APP:=ps aux | grep $(TARG) | grep -v grep | awk '{print $$2}' | xargs kill -9
+SHOW_APP:=ps aux | grep $(TARG) | grep -v grep
 
 .PHONY: help
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
 	@echo "  check    to check app config"
-	@echo "  start    to start app server in docker"
-	@echo "  restart  to restart app server in docker"
-	@echo "  stop     to stop app server in docker"
-	@echo "  clean    to clean the temp files for developement"
+	@echo "  restart  to restart app server"
+	@echo "  stop     to stop app server"
+	@echo "  clean    to stop app server and clean the temp files"
 	@echo "  help     to show this help informatrion"
 
 .PHONY: check
@@ -19,18 +20,22 @@ check:
 	@echo "check todo"
 
 .PHONY: restart
-restart:
-	@echo "restart todo"
-
-.PHONY: start
-start:
-	@echo "start todo"
+restart: $(TARG).out stop
+	nohup ./$(TARG).out > _app.log 2>&1 &
 
 .PHONY: stop
 stop:
-	@echo "todo"
+	-$(KILL_APP)
 
+.PHONY: ps
+ps:
+	-$(SHOW_APP)
 
 .PHONY: clean
-clean:
-	@echo "todo"
+clean: stop
+	-rm $(TARG).out
+	-rm _app.log
+
+
+$(TARG).out: main.go
+	go build -o $@
