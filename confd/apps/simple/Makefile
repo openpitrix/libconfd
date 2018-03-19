@@ -24,12 +24,10 @@ help:
 .PHONY: check-config
 check-config: $(TARG).out
 	./$(TARG).out -check-config
-	@echo "ok"
 
 .PHONY: check-server
 check-server: $(TARG).out
 	./$(TARG).out -check-server
-	@echo "ok"
 
 .PHONY: start
 start: $(TARG).out
@@ -54,6 +52,6 @@ clean: stop
 
 
 $(TARG).out: $(GO_FILES)
-	go fmt ./...
-	go vet ./...
+	@go fmt ./...
+	@go vet ./...
 	go build -o $@
