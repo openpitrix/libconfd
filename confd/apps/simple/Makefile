@@ -10,6 +10,7 @@ SHOW_APP:=ps aux | grep $(TARG) | grep -v grep
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
 	@echo "  check    to check app config"
+	@echo "  start    to start app server"
 	@echo "  restart  to restart app server"
 	@echo "  stop     to stop app server"
 	@echo "  clean    to stop app server and clean the temp files"
@@ -18,6 +19,10 @@ help:
 .PHONY: check
 check:
 	@echo "check todo"
+
+.PHONY: start
+start: $(TARG).out
+	nohup ./$(TARG).out > _app.log 2>&1 &
 
 .PHONY: restart
 restart: $(TARG).out stop

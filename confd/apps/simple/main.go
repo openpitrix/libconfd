@@ -7,20 +7,78 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
+var (
+	flagConfigFile = flag.String("config", "config.json", "set config file")
+)
+
+type Config struct {
+	ListenPort int `json:"listen_port"`
+}
+
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 func main() {
-	fmt.Println("Please visit http://127.0.0.1:12345/")
+	flag.Parse()
+
+	cfg := MustLoadConfig(*flagConfigFile)
+	addr := fmt.Sprintf(":%d", cfg.ListenPort)
+	fmt.Printf("Please visit http://localhost:%d/\n", cfg.ListenPort)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		s := fmt.Sprintf("你好, 世界! -- Time: %s", time.Now().String())
-		fmt.Fprintf(w, "%v\n", s)
-		log.Printf("%v\n", s)
+		fmt.Fprintf(w, "config: %s\n", JsonEncode(cfg))
+		log.Printf("config: %s\n", JsonEncode(cfg))
 	})
-	if err := http.ListenAndServe(":12345", nil); err != nil {
+	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func MustLoadConfig(path string) *Config {
+	var p Config
+	if err := JsonLoad(path, &p); err != nil {
+		log.Fatalf("MustLoadConfig: JsonLoad: %v\n", err)
+	}
+	if err := IsValidConfig(&p); err != nil {
+		log.Fatalf("MustLoadConfig: invalid config: %v\n", err)
+	}
+	return &p
+}
+
+func IsValidConfig(cfg *Config) error {
+	if cfg.ListenPort <= 0 {
+		return fmt.Errorf("cfg: invalid port: %d", cfg.ListenPort)
+	}
+	return nil
+}
+
+func JsonLoad(filename string, m interface{}) (err error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(data, m)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func JsonEncode(m interface{}) []byte {
+	data, err := json.MarshalIndent(m, "", "\t")
+	if err != nil {
+		return nil
+	}
+	data = bytes.Replace(data, []byte("\n"), []byte("\r\n"), -1)
+	return data
 }
