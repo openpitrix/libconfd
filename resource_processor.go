@@ -169,6 +169,11 @@ func NewTemplateResourceProcessor(
 	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 
+	// replace ${LIBCONFD_GOOS}
+	tr.Dest = strings.Replace(tr.Dest, `${LIBCONFD_GOOS}`, runtime.GOOS, -1)
+	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_GOOS}`, runtime.GOOS, -1)
+	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_GOOS}`, runtime.GOOS, -1)
+
 	return &tr, nil
 }
 
