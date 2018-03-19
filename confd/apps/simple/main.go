@@ -2,8 +2,6 @@
 // Use of this source code is governed by a Apache license
 // that can be found in the LICENSE file.
 
-// TODO: support json format config file
-
 package main
 
 import (
@@ -17,7 +15,9 @@ import (
 )
 
 var (
-	flagConfigFile = flag.String("config", "config.json", "set config file")
+	flagConfigFile  = flag.String("config", "config.json", "set config file")
+	flagCheckConfig = flag.Bool("check-config", false, "check config file")
+	flagCheckServer = flag.Bool("check-server", false, "check json response")
 )
 
 type Config struct {
@@ -31,12 +31,22 @@ func init() {
 func main() {
 	flag.Parse()
 
+	if *flagCheckConfig {
+		checkConfigFile(*flagConfigFile)
+		return
+	}
+
 	cfg := MustLoadConfig(*flagConfigFile)
+	if *flagCheckServer {
+		checkJsonResponse(cfg)
+		return
+	}
+
 	addr := fmt.Sprintf(":%d", cfg.ListenPort)
 	fmt.Printf("Please visit http://localhost:%d/\n", cfg.ListenPort)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "config: %s\n", JsonEncode(cfg))
+		fmt.Fprintf(w, "%s\n", JsonEncode(cfg))
 		log.Printf("config: %s\n", JsonEncode(cfg))
 	})
 	if err := http.ListenAndServe(addr, nil); err != nil {

@@ -7,7 +7,7 @@ src = "simple.json.tmpl"
 dest = "simple.json"
 
 check_cmd = """
-	make -C ${LIBCONFD_CONFDIR}/apps/simple check
+	make -C ${LIBCONFD_CONFDIR}/apps/simple check-config
 """
 
 reload_cmd = """

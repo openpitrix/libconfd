@@ -3,22 +3,33 @@
 # that can be found in the LICENSE file.
 
 TARG:=libconfd-simple-app
+
+GO_FILES=$(sort $(wildcard ./*.go))
+
 KILL_APP:=ps aux | grep $(TARG) | grep -v grep | awk '{print $$2}' | xargs kill -9
 SHOW_APP:=ps aux | grep $(TARG) | grep -v grep
 
 .PHONY: help
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
-	@echo "  check    to check app config"
-	@echo "  start    to start app server"
-	@echo "  restart  to restart app server"
-	@echo "  stop     to stop app server"
-	@echo "  clean    to stop app server and clean the temp files"
-	@echo "  help     to show this help informatrion"
+	@echo "  check-config to check app config"
+	@echo "  check-server to check app server"
+	@echo "  start        to start app server"
+	@echo "  restart      to restart app server"
+	@echo "  stop         to stop app server"
+	@echo "  clean        to stop app server and clean the temp files"
+	@echo "  help         to show this help informatrion"
 
-.PHONY: check
-check:
-	@echo "check todo"
+
+.PHONY: check-config
+check-config: $(TARG).out
+	./$(TARG).out -check-config
+	@echo "ok"
+
+.PHONY: check-server
+check-server: $(TARG).out
+	./$(TARG).out -check-server
+	@echo "ok"
 
 .PHONY: start
 start: $(TARG).out
@@ -42,5 +53,7 @@ clean: stop
 	-rm _app.log
 
 
-$(TARG).out: main.go
+$(TARG).out: $(GO_FILES)
+	go fmt ./...
+	go vet ./...
 	go build -o $@
