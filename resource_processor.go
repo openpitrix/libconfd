@@ -47,7 +47,38 @@ func MakeAllTemplateResourceProcessor(
 		return nil, fmt.Errorf("confdir '%s' does not exist", config.ConfDir)
 	}
 
-	paths, err := findFilesRecursive(config.GetConfigDir(), "*toml")
+	paths, err := findFilesRecursive(config.GetConfigDir(), "*toml", func(path string) bool {
+		if strings.HasPrefix(filepath.Base(path), "_") {
+			return false
+		}
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			return false
+		}
+
+		switch {
+		case strings.HasSuffix(path, ".darwin.toml"):
+			if runtime.GOOS != "darwin" {
+				return false
+			}
+		case strings.HasSuffix(path, ".linux.toml"):
+			if runtime.GOOS != "linux" {
+				return false
+			}
+		case strings.HasSuffix(path, ".windows.toml"):
+			if runtime.GOOS != "windows" {
+				return false
+			}
+		}
+		if data, err := ioutil.ReadFile(path); err == nil {
+			if bytes.Contains(data, []byte("# +build ignore")) {
+				return false
+			}
+			if bytes.Contains(data, []byte("# +build "+runtime.GOOS)) {
+				return true
+			}
+		}
+		return true
+	})
 	if err != nil {
 		logger.Warning("findFilesRecursive(%q, %q): %v", config.GetConfigDir(), "*toml", err)
 		return nil, err
@@ -60,11 +91,18 @@ func MakeAllTemplateResourceProcessor(
 		}
 		var ss []string
 		for _, s := range paths {
-			if !strInStrList(
-				strings.TrimSuffix(filepath.Base(s), ".toml"),
-				config.IgnoredList,
-			) {
-				ss = append(ss, s)
+			name := filepath.Base(s)
+			switch {
+			case strings.HasSuffix(name, ".darwin.toml"):
+				name = strings.TrimSuffix(name, ".darwin.toml")
+			case strings.HasSuffix(name, ".linux.toml"):
+				name = strings.TrimSuffix(name, ".linux.toml")
+			case strings.HasSuffix(name, ".windows.toml"):
+				name = strings.TrimSuffix(name, ".windows.toml")
+			}
+
+			if !strInStrList(name, config.IgnoredList) {
+				ss = append(ss, name)
 			}
 		}
 		return ss

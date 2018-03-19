@@ -19,7 +19,7 @@ func TestFindFilesrRecursive(t *testing.T) {
 	}
 	defer os.RemoveAll(rootDir)
 
-	files, err := findFilesRecursive(rootDir, "*toml")
+	files, err := findFilesRecursive(rootDir, "*toml", nil)
 	if err != nil {
 		t.Errorf("Failed to run findFilesRecursive, got error: %v", err)
 	}
