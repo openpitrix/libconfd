@@ -8,14 +8,18 @@ type Application struct {
 	cfg *Config
 }
 
-func NewApplication(cfg *Config) *Application {
+func NewApplication(cfg *Config, client Client) *Application {
 	return &Application{
 		cfg: cfg.Clone(),
 	}
 }
 
+func (p *Application) Main() {
+	panic("TODO")
+}
+
 func (p *Application) List() []string {
-	return nil
+	panic("TODO")
 }
 
 func (p *Application) Info(name string) *TemplateResource {
@@ -23,6 +27,10 @@ func (p *Application) Info(name string) *TemplateResource {
 }
 
 func (p *Application) Make(name string) error {
+	panic("TODO")
+}
+
+func (p *Application) GetValue(key string) string {
 	panic("TODO")
 }
 
