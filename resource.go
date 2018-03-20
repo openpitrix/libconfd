@@ -18,17 +18,17 @@ type _TemplateResourceConfig struct {
 
 // TemplateResource is the representation of a parsed template resource.
 type TemplateResource struct {
-	Src           string
-	Dest          string
-	Prefix        string
-	Keys          []string
-	Mode          string
-	Gid           int
-	Uid           int
-	CheckCmd      string `toml:"check_cmd"`
-	ReloadCmd     string `toml:"reload_cmd"`
-	FileMode      os.FileMode
-	PGPPrivateKey []byte
+	Src           string      `toml:"src" json:"src"`
+	Dest          string      `toml:"dest" json:"dest"`
+	Prefix        string      `toml:"prefix" json:"prefix"`
+	Keys          []string    `toml:"keys" json:"keys"`
+	Mode          string      `toml:"mode" json:"mode"`
+	Gid           int         `toml:"gid" json:"gid"`
+	Uid           int         `toml:"uid" json:"uid"`
+	CheckCmd      string      `toml:"check_cmd" json:"check_cmd"`
+	ReloadCmd     string      `toml:"reload_cmd" json:"reload_cmd"`
+	FileMode      os.FileMode `toml:"file_mode" json:"file_mode"`
+	PGPPrivateKey []byte      `toml:"pgp_private_key" json:"pgp_private_key"`
 }
 
 func LoadTemplateResource(data string) (*TemplateResource, error) {
