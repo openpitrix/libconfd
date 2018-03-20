@@ -9,14 +9,6 @@
 #
 confdir = "./confd"
 
-# Ignored template name list
-ignored = [
-	"ignored.xml",
-	"catalina_start.sh",
-	"server.xml",
-	"tomcat-users.xml",
-]
-
 # The backend polling interval in seconds. (10)
 interval = 10
 

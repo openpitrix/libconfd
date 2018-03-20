@@ -21,10 +21,6 @@ func TestConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// ignord Ignored fileds
-	tConfig.IgnoredList = nil
-	p.IgnoredList = nil
-
 	if !reflect.DeepEqual(p, tConfig) {
 		t.Fatalf("expect = %#v, got = %#v", tConfig, p)
 	}

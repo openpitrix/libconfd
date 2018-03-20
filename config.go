@@ -22,9 +22,6 @@ type Config struct {
 	//
 	ConfDir string `toml:"confdir" json:"confdir"`
 
-	// Ignored template name list
-	IgnoredList []string `toml:"ignored" json:"ignored"`
-
 	// The backend polling interval in seconds. (10)
 	Interval int `toml:"interval" json:"interval"`
 
@@ -74,9 +71,6 @@ const defaultConfigContent = `
 # abspath = filepath.Join(ConfigPath, Config.ConfDir)
 #
 confdir = "confd"
-
-# Ignored template name list
-ignored = ["ignored.xml"]
 
 # The backend polling interval in seconds. (10)
 interval = 10
@@ -208,9 +202,6 @@ func (p *Config) Save(name string) error {
 
 func (p *Config) Clone() *Config {
 	q := *p
-
-	// clone slice
-	q.IgnoredList = append([]string{}, p.IgnoredList...)
 
 	// clone map
 	if p.FuncMap != nil {

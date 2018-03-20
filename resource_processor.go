@@ -94,11 +94,7 @@ func MakeAllTemplateResourceProcessor(
 		return nil, err
 	}
 
-	// skip ignored template
 	paths = func() []string {
-		if len(config.IgnoredList) == 0 {
-			return paths
-		}
 		var ss []string
 		for _, s := range paths {
 			name := filepath.Base(s)
@@ -109,10 +105,6 @@ func MakeAllTemplateResourceProcessor(
 				name = strings.TrimSuffix(name, ".linux.toml")
 			case strings.HasSuffix(name, ".windows.toml"):
 				name = strings.TrimSuffix(name, ".windows.toml")
-			}
-
-			if !strInStrList(name, config.IgnoredList) {
-				ss = append(ss, name)
 			}
 		}
 		return ss
