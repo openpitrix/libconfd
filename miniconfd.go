@@ -79,13 +79,13 @@ EXAMPLE:
 		{
 			Name:      "make",
 			Usage:     "make template target, not run any command",
-			ArgsUsage: "target",
+			ArgsUsage: "[target...]",
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
 				client := libconfd.NewFileBackendsClient(cfg.File)
 
-				libconfd.NewApplication(cfg, client).Make(c.Args().First())
+				libconfd.NewApplication(cfg, client).Make(c.Args()...)
 				return
 			},
 		},

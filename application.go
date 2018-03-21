@@ -64,8 +64,38 @@ func (p *Application) Info(names ...string) {
 	}
 }
 
-func (p *Application) Make(name string) {
-	panic("TODO")
+func (p *Application) Make(names ...string) {
+	if len(names) == 0 {
+		_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		names = paths
+	}
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".toml") {
+			name += ".toml"
+		}
+
+		fmt.Print(filepath.Base(name), " ")
+
+		tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		tcp := NewTemplateResourceProcessor(name, p.cfg, p.client, tc)
+
+		cfg := p.cfg.Clone()
+		cfg.Noop = true
+
+		err = tcp.Process(&Call{Config: cfg, Client: p.client})
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		fmt.Println("done")
+	}
 }
 
 func (p *Application) GetValues(keys ...string) {
