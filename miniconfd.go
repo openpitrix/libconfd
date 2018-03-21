@@ -40,14 +40,8 @@ EXAMPLE:
 			EnvVar: "MINICONFD_CONFILE_FILE",
 		},
 		cli.StringFlag{
-			Name:   "backend-type",
-			Value:  "backend-type-toml",
-			Usage:  "miniconfd backend type",
-			EnvVar: "MINICONFD_BACKEND_TYPE",
-		},
-		cli.StringFlag{
 			Name:   "backend-config",
-			Value:  "backend-confd.toml",
+			Value:  "confd-backend.toml",
 			Usage:  "miniconfd backend config file",
 			EnvVar: "MINICONFD_BACKEND_CONFILE_FILE",
 		},
@@ -66,7 +60,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
+				client := libconfd.NewFileBackendsClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).List(c.Args().First())
 				return
@@ -79,7 +73,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
+				client := libconfd.NewFileBackendsClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Info(c.Args()...)
 				return
@@ -93,7 +87,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
+				client := libconfd.NewFileBackendsClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Make(c.Args()...)
 				return
@@ -107,7 +101,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
+				client := libconfd.NewFileBackendsClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).GetValues(c.Args()...)
 				return
@@ -142,7 +136,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
+				client := libconfd.NewFileBackendsClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Run(
 					func(cfg *libconfd.Config) {

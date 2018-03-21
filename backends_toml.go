@@ -17,10 +17,13 @@ type TomlBackend struct {
 	TOMLFile string
 }
 
-func NewTomlBackendClient(TOMLFile string) *TomlBackend {
-	return &TomlBackend{
-		TOMLFile: TOMLFile,
-	}
+func NewTomlBackendClient(cfg *BeckendConfig) *TomlBackend {
+	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
+	return &TomlBackend{TOMLFile: cfg.Host}
+}
+
+func (_ *TomlBackend) Type() string {
+	return "libconfd-backend-builtin-toml"
 }
 
 func (_ *TomlBackend) WatchEnabled() bool {

@@ -39,7 +39,7 @@ type Config struct {
 	LogLevel string `toml:"log-level" json:"log-level"`
 
 	// the TOML backend file to watch for changes
-	File string `toml:"file" json:"file"`
+	//File string `toml:"file" json:"file"`
 
 	// run once and exit
 	Onetime bool `toml:"onetime" json:"onetime"`
@@ -116,13 +116,6 @@ func newDefaultConfig() (p *Config) {
 		}
 		p.ConfDir = filepath.Clean(filepath.Join(absdir, p.ConfDir))
 	}
-	if p.File != "" && !filepath.IsAbs(p.File) {
-		absdir, err := filepath.Abs(".")
-		if err != nil {
-			logger.Panic(err)
-		}
-		p.File = filepath.Clean(filepath.Join(absdir, p.File))
-	}
 	return
 }
 
@@ -147,13 +140,6 @@ func LoadConfig(path string) (p *Config, err error) {
 		}
 		p.ConfDir = filepath.Clean(filepath.Join(absdir, p.ConfDir))
 	}
-	if p.File != "" && !filepath.IsAbs(p.File) {
-		absdir, err := filepath.Abs(filepath.Dir(path))
-		if err != nil {
-			return nil, err
-		}
-		p.File = filepath.Clean(filepath.Join(absdir, p.File))
-	}
 	return p, nil
 }
 
@@ -161,15 +147,9 @@ func (p *Config) Valid() error {
 	if !filepath.IsAbs(p.ConfDir) {
 		return fmt.Errorf("ConfDir is not abs path: %s", p.ConfDir)
 	}
-	if p.File != "" && !filepath.IsAbs(p.File) {
-		return fmt.Errorf("BackendFile is not abs path: %s", p.File)
-	}
 
 	if !dirExists(p.ConfDir) {
 		return fmt.Errorf("ConfDir not exists: %s", p.ConfDir)
-	}
-	if p.File != "" && !fileExists(p.File) {
-		return fmt.Errorf("BackendFile not exists: %s", p.File)
 	}
 
 	if p.Interval < 0 {

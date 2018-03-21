@@ -17,6 +17,10 @@ func tNewEnvClient() Client {
 	return new(tEnvClient)
 }
 
+func (_ *tEnvClient) Type() string {
+	return "libconfd-backend-internal-env"
+}
+
 func (_ *tEnvClient) Close() error {
 	return nil
 }
