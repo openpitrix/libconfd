@@ -162,16 +162,19 @@ func (p *stdLogger) SetLevel(new string) (old string) {
 func (p *stdLogger) Assert(condition bool, v ...interface{}) {
 	if l := logDebugLevel; p.getLevel() <= l && !condition {
 		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+		os.Exit(1)
 	}
 }
 func (p *stdLogger) Assertln(condition bool, v ...interface{}) {
 	if l := logDebugLevel; p.getLevel() <= l && !condition {
 		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+		os.Exit(1)
 	}
 }
 func (p *stdLogger) Assertf(condition bool, format string, v ...interface{}) {
 	if l := logDebugLevel; p.getLevel() <= l && !condition {
 		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+		os.Exit(1)
 	}
 }
 
