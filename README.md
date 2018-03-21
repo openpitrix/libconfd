@@ -27,7 +27,7 @@ func main() {
 }
 ```
 
-## miniconfd (only support toml backend)
+## miniconfd (only support toml/etcd backend)
 
 ```
 $ go run miniconfd.go -h

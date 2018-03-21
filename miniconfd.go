@@ -20,7 +20,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "miniconfd"
-	app.Usage = "miniconfd is simple confd, only support toml backend file."
+	app.Usage = "miniconfd is simple confd, only support toml/etcd backend."
 	app.Version = "0.1.0"
 
 	app.UsageText = `miniconfd [global options] command [options] [args...]
