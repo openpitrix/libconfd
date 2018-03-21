@@ -13,7 +13,7 @@ import (
 
 type Call struct {
 	Config *Config
-	Client BeckendClient
+	Client BackendClient
 	Error  error
 	Done   chan *Call
 }
@@ -79,7 +79,7 @@ func (p *Processor) clearPendingCall() {
 	p.pending = p.pending[:0]
 }
 
-func (p *Processor) checkBackendClient(client BeckendClient) error {
+func (p *Processor) checkBackendClient(client BackendClient) error {
 	_, err := client.GetValues([]string{"/"})
 	return err
 }
@@ -121,7 +121,7 @@ func NewProcessor() *Processor {
 	return p
 }
 
-func (p *Processor) Go(cfg *Config, client BeckendClient, opts ...Options) *Call {
+func (p *Processor) Go(cfg *Config, client BackendClient, opts ...Options) *Call {
 	if client == nil {
 		logger.Panic("client is nil")
 	}
@@ -150,7 +150,7 @@ func (p *Processor) Go(cfg *Config, client BeckendClient, opts ...Options) *Call
 	return call
 }
 
-func (p *Processor) Run(cfg *Config, client BeckendClient, opts ...Options) error {
+func (p *Processor) Run(cfg *Config, client BackendClient, opts ...Options) error {
 	if err := cfg.Valid(); err != nil {
 		return err
 	}

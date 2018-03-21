@@ -22,14 +22,14 @@ type BeckendConfig struct {
 	ClientKey    string `toml:"client-key" json:"client-key"`
 }
 
-type BeckendClient interface {
+type BackendClient interface {
 	Type() string
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
 	WatchEnabled() bool
 }
 
-func MustNewBackendClient(file string) BeckendClient {
+func MustNewBackendClient(file string) BackendClient {
 	p, err := NewBackendClient(file)
 	if err != nil {
 		logger.Panic(err)
@@ -37,7 +37,7 @@ func MustNewBackendClient(file string) BeckendClient {
 	return p
 }
 
-func NewBackendClient(file string) (BeckendClient, error) {
+func NewBackendClient(file string) (BackendClient, error) {
 	cfg, err := LoadBeckendConfig(file)
 	if err != nil {
 		return nil, err
@@ -70,9 +70,9 @@ func LoadBeckendConfig(path string) (p *BeckendConfig, err error) {
 
 func RegisterBackendClient(
 	typeName string,
-	newClient func(cfg *BeckendConfig) (BeckendClient, error),
+	newClient func(cfg *BeckendConfig) (BackendClient, error),
 ) {
 	_BackendClientMap[typeName] = newClient
 }
 
-var _BackendClientMap = map[string]func(cfg *BeckendConfig) (BeckendClient, error){}
+var _BackendClientMap = map[string]func(cfg *BeckendConfig) (BackendClient, error){}

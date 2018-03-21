@@ -15,7 +15,7 @@ type tEnvClient struct{}
 func init() {
 	RegisterBackendClient(
 		(*tEnvClient)(nil).Type(),
-		func(cfg *BeckendConfig) (BeckendClient, error) {
+		func(cfg *BeckendConfig) (BackendClient, error) {
 			p := tNewEnvClient()
 			return p, nil
 		},
@@ -23,7 +23,7 @@ func init() {
 }
 
 // tNewEnvClient returns a new client
-func tNewEnvClient() BeckendClient {
+func tNewEnvClient() BackendClient {
 	return new(tEnvClient)
 }
 

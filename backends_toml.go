@@ -11,7 +11,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-var _ BeckendClient = (*TomlBackend)(nil)
+var _ BackendClient = (*TomlBackend)(nil)
 
 type TomlBackend struct {
 	TOMLFile string
@@ -20,7 +20,7 @@ type TomlBackend struct {
 func init() {
 	RegisterBackendClient(
 		(*TomlBackend)(nil).Type(),
-		func(cfg *BeckendConfig) (BeckendClient, error) {
+		func(cfg *BeckendConfig) (BackendClient, error) {
 			p := NewTomlBackendClient(cfg)
 			return p, nil
 		},
