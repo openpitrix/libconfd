@@ -15,16 +15,20 @@ import (
 
 func Example() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
 
-	libconfd.NewProcessor().Run(cfg, client)
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
+
+	libconfd.NewProcessor().Run(cfg, backendClient)
 }
 
 func Example_async() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
 
-	call := libconfd.NewProcessor().Go(cfg, client)
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
+
+	call := libconfd.NewProcessor().Go(cfg, backendClient)
 
 	// do some thing
 
@@ -34,21 +38,25 @@ func Example_async() {
 
 func Example_multiSync() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
 
-	go libconfd.NewProcessor().Run(cfg, client)
-	go libconfd.NewProcessor().Run(cfg, client)
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
+
+	go libconfd.NewProcessor().Run(cfg, backendClient)
+	go libconfd.NewProcessor().Run(cfg, backendClient)
 
 	<-make(chan bool)
 }
 
 func Example_multiAsync() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
+
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
 
 	var callList = []*libconfd.Call{
-		libconfd.NewProcessor().Go(cfg, client),
-		libconfd.NewProcessor().Go(cfg, client),
+		libconfd.NewProcessor().Go(cfg, backendClient),
+		libconfd.NewProcessor().Go(cfg, backendClient),
 	}
 
 	var wg sync.WaitGroup
@@ -66,15 +74,19 @@ func Example_multiAsync() {
 
 func Example_option() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
 
-	libconfd.NewProcessor().Run(cfg, client,
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
+
+	libconfd.NewProcessor().Run(cfg, backendClient,
 		libconfd.WithIntervalMode(),
 	)
 }
 func Example_close() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	client := libconfd.MustNewBackendClient("./confd-backend.toml")
+
+	backendConfig := libconfd.MustLoadBackendConfig("./confd-backend.toml")
+	backendClient := libconfd.MustNewBackendClient(backendConfig)
 
 	p := libconfd.NewProcessor()
 
@@ -86,7 +98,7 @@ func Example_close() {
 		<-c
 	}()
 
-	p.Run(cfg, client)
+	p.Run(cfg, backendClient)
 }
 
 func Example_logger() {

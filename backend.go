@@ -35,18 +35,18 @@ type BackendClient interface {
 	WatchEnabled() bool
 }
 
-func MustNewBackendClient(file string) BackendClient {
-	p, err := NewBackendClient(file)
+func MustNewBackendClient(cfg *BackendConfig, opts ...func(*BackendConfig)) BackendClient {
+	p, err := NewBackendClient(cfg, opts...)
 	if err != nil {
 		logger.Panic(err)
 	}
 	return p
 }
 
-func NewBackendClient(file string) (BackendClient, error) {
-	cfg, err := LoadBackendConfig(file)
-	if err != nil {
-		return nil, err
+func NewBackendClient(cfg *BackendConfig, opts ...func(*BackendConfig)) (BackendClient, error) {
+	cfg = cfg.Clone()
+	for _, fn := range opts {
+		fn(cfg)
 	}
 
 	newClient := _BackendClientMap[cfg.Type]
