@@ -6,6 +6,8 @@ package libconfd
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -117,5 +119,17 @@ func (p *Application) GetValues(keys ...string) {
 }
 
 func (p *Application) Run(opts ...Options) {
-	NewProcessor().Run(p.cfg, p.client, opts...)
+	service := NewProcessor()
+
+	go func() {
+		defer service.Close()
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, os.Kill)
+		<-c
+
+		fmt.Println("quit")
+	}()
+
+	service.Run(p.cfg, p.client, opts...)
 }
