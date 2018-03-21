@@ -141,7 +141,10 @@ EXAMPLE:
 			},
 
 			Action: func(c *cli.Context) {
-				var opts = []libconfd.Options{
+				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
+				client := libconfd.NewFileBackendsClient(cfg.File)
+
+				libconfd.NewApplication(cfg, client).Run(
 					func(cfg *libconfd.Config) {
 						cfg.Onetime = c.Bool("once")
 					},
@@ -151,12 +154,7 @@ EXAMPLE:
 					func(cfg *libconfd.Config) {
 						cfg.Watch = c.Bool("watch")
 					},
-				}
-
-				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.NewFileBackendsClient(cfg.File)
-
-				libconfd.NewApplication(cfg, client).Run(opts...)
+				)
 				return
 			},
 		},
