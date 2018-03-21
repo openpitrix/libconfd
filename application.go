@@ -6,6 +6,8 @@ package libconfd
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 )
 
 type Application struct {
@@ -20,12 +22,25 @@ func NewApplication(cfg *Config, client Client) *Application {
 	}
 }
 
-func (p *Application) List() []string {
-	panic("TODO")
+func (p *Application) List() {
+	_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	for _, s := range paths {
+		fmt.Println(filepath.Base(s))
+	}
 }
 
 func (p *Application) Info(name string) {
-	panic("TODO")
+	if !strings.HasSuffix(name, ".toml") {
+		name += ".toml"
+	}
+	tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	fmt.Println(tc.TomlString())
 }
 
 func (p *Application) Make(name string) {
