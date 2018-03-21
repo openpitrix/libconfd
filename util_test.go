@@ -8,31 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
 )
-
-func TestFindFilesrRecursive(t *testing.T) {
-	// Setup temporary directories
-	rootDir, exceptedFiles, err := tCreateRecursiveDirs()
-	if err != nil {
-		t.Errorf("Failed to create temp dirs: %v", err)
-	}
-	defer os.RemoveAll(rootDir)
-
-	files, err := findFilesRecursive(rootDir, "*toml", nil)
-	if err != nil {
-		t.Errorf("Failed to run findFilesRecursive, got error: %v", err)
-	}
-
-	if len(exceptedFiles) != len(files) {
-		t.FailNow()
-	}
-	for i, f := range exceptedFiles {
-		if f != files[i] {
-			t.FailNow()
-		}
-	}
-}
 
 //
 // tCreateRecursiveDirs is a helper function which creates temporary directorie

@@ -19,16 +19,6 @@ import (
 	"text/template"
 )
 
-var _LIBCONFD_GOOS = func() string {
-	if s := os.Getenv("LIBCONFD_GOOS"); s != "" {
-		return s
-	}
-	if s := os.Getenv("GOOS"); s != "" {
-		return s
-	}
-	return runtime.GOOS
-}()
-
 type TemplateResourceProcessor struct {
 	TemplateResource
 
@@ -52,91 +42,21 @@ func MakeAllTemplateResourceProcessor(
 ) {
 	logger.Debug("Loading template resources from confdir " + config.ConfDir)
 
-	if fileNotExists(config.ConfDir) {
-		logger.Warning(fmt.Sprintf("Cannot load template resources: confdir '%s' does not exist", config.ConfDir))
-		return nil, fmt.Errorf("confdir '%s' does not exist", config.ConfDir)
-	}
-
-	paths, err := findFilesRecursive(config.GetConfigDir(), "*toml", func(path string) bool {
-		if strings.HasPrefix(filepath.Base(path), "_") {
-			return false
-		}
-		if strings.HasPrefix(filepath.Base(path), ".") {
-			return false
-		}
-
-		switch {
-		case strings.HasSuffix(path, ".darwin.toml"):
-			if _LIBCONFD_GOOS != "darwin" {
-				return false
-			}
-		case strings.HasSuffix(path, ".linux.toml"):
-			if _LIBCONFD_GOOS != "linux" {
-				return false
-			}
-		case strings.HasSuffix(path, ".windows.toml"):
-			if _LIBCONFD_GOOS != "windows" {
-				return false
-			}
-		}
-		if data, err := ioutil.ReadFile(path); err == nil {
-			if bytes.Contains(data, []byte("# +build ignore")) {
-				return false
-			}
-			if bytes.Contains(data, []byte("# +build !"+_LIBCONFD_GOOS)) {
-				return false
-			}
-			if bytes.Contains(data, []byte("# +build "+_LIBCONFD_GOOS)) {
-				return true
-			}
-		}
-		return true
-	})
+	tcs, paths, err := ListTemplateResource(config.GetConfigDir())
 	if err != nil {
-		logger.Warning("findFilesRecursive(%q, %q): %v", config.GetConfigDir(), "*toml", err)
 		return nil, err
 	}
-
-	paths = func() []string {
-		var ss []string
-		for _, s := range paths {
-			name := filepath.Base(s)
-			switch {
-			case strings.HasSuffix(name, ".darwin.toml"):
-				name = strings.TrimSuffix(name, ".darwin.toml")
-			case strings.HasSuffix(name, ".linux.toml"):
-				name = strings.TrimSuffix(name, ".linux.toml")
-			case strings.HasSuffix(name, ".windows.toml"):
-				name = strings.TrimSuffix(name, ".windows.toml")
-			}
-		}
-		return ss
-	}()
-
-	logger.Debugln("paths:", paths)
 
 	if len(paths) == 0 {
 		logger.Warning("Found no templates")
 		return nil, fmt.Errorf("Found no templates")
 	}
 
-	var lastError error
-	var templates = make([]*TemplateResourceProcessor, 0)
-
-	for _, p := range paths {
-		logger.Debugf("Found template: %s", p)
-
-		t, err := NewTemplateResourceProcessor(p, config, client)
-		if err != nil {
-			logger.Error(err)
-			lastError = err
-			continue
-		}
-
-		templates = append(templates, t)
-	}
-	if lastError != nil {
-		return templates, lastError
+	templates := make([]*TemplateResourceProcessor, len(paths))
+	for i, p := range paths {
+		templates[i] = NewTemplateResourceProcessor(
+			p, config, client, tcs[i],
+		)
 	}
 
 	return templates, nil
@@ -144,18 +64,9 @@ func MakeAllTemplateResourceProcessor(
 
 // NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
 func NewTemplateResourceProcessor(
-	path string, config *Config, client Client,
-) (
-	*TemplateResourceProcessor,
-	error,
-) {
+	path string, config *Config, client Client, res *TemplateResource,
+) *TemplateResourceProcessor {
 	logger.Debug("Loading template resource from " + path)
-
-	res, err := LoadTemplateResourceFile(path)
-	if err != nil {
-		logger.Warning(err)
-		return nil, fmt.Errorf("Cannot process template resource %s - %v", path, err)
-	}
 
 	tr := TemplateResourceProcessor{
 		TemplateResource: *res,
@@ -188,10 +99,6 @@ func NewTemplateResourceProcessor(
 		tr.PGPPrivateKey = append([]byte{}, config.PGPPrivateKey...)
 	}
 
-	if tr.Src == "" {
-		return nil, errors.New("libconfd: empty src template")
-	}
-
 	if tr.Uid == -1 {
 		tr.Uid = os.Geteuid()
 	}
@@ -212,7 +119,7 @@ func NewTemplateResourceProcessor(
 	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 
-	return &tr, nil
+	return &tr
 }
 
 // process is a convenience function that wraps calls to the three main tasks

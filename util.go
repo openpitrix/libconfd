@@ -6,9 +6,7 @@ package libconfd
 
 import (
 	"os"
-	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 )
 
@@ -43,23 +41,6 @@ func fileNotExists(path string) bool {
 		return true
 	}
 	return false
-}
-
-// findFilesRecursive find files with pattern in the rootdir with depth.
-func findFilesRecursive(rootdir, pattern string, filter func(name string) bool) (files []string, err error) {
-	err = filepath.Walk(rootdir, func(path string, f os.FileInfo, err error) (inner error) {
-		if err != nil || f.IsDir() {
-			return
-		}
-		if matched, _ := filepath.Match(pattern, f.Name()); matched {
-			if filter == nil || filter(path) {
-				files = append(files, path)
-			}
-		}
-		return
-	})
-	sort.Strings(files)
-	return
 }
 
 func getFuncName(skips ...int) string {

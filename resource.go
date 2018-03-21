@@ -6,8 +6,13 @@ package libconfd
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -31,28 +36,103 @@ type TemplateResource struct {
 	PGPPrivateKey []byte      `toml:"pgp_private_key" json:"pgp_private_key"`
 }
 
-func LoadTemplateResource(data string) (*TemplateResource, error) {
-	p := &_TemplateResourceConfig{
-		TemplateResource: TemplateResource{
-			Gid: -1,
-			Uid: -1,
-		},
+var _LIBCONFD_GOOS = func() string {
+	if s := os.Getenv("LIBCONFD_GOOS"); s != "" {
+		return s
 	}
-	_, err := toml.Decode(data, p)
-	if err != nil {
-		return nil, err
+	if s := os.Getenv("GOOS"); s != "" {
+		return s
+	}
+	return runtime.GOOS
+}()
+
+func isTemplateResourceFileShouldBeBuilt(abspath string) bool {
+	basename := filepath.Base(abspath)
+
+	if strings.HasPrefix(basename, "_") {
+		return false
+	}
+	if strings.HasPrefix(basename, ".") {
+		return false
+	}
+	if !strings.HasSuffix(basename, ".toml") {
+		return false
 	}
 
-	return &p.TemplateResource, nil
+	switch {
+	case strings.HasSuffix(basename, ".darwin.toml"):
+		if _LIBCONFD_GOOS != "darwin" {
+			return false
+		}
+	case strings.HasSuffix(basename, ".linux.toml"):
+		if _LIBCONFD_GOOS != "linux" {
+			return false
+		}
+	case strings.HasSuffix(basename, ".windows.toml"):
+		if _LIBCONFD_GOOS != "windows" {
+			return false
+		}
+	}
+
+	if data, err := ioutil.ReadFile(abspath); err == nil {
+		if bytes.Contains(data, []byte("# +build ignore")) {
+			return false
+		}
+		if bytes.Contains(data, []byte("# +build !"+_LIBCONFD_GOOS)) {
+			return false
+		}
+		if bytes.Contains(data, []byte("# +build "+_LIBCONFD_GOOS)) {
+			return true
+		}
+	}
+	return true
 }
 
-func LoadTemplateResourceFile(name string) (*TemplateResource, error) {
+func ListTemplateResource(confdir string) ([]*TemplateResource, []string, error) {
+	if !dirExists(confdir) {
+		return nil, nil, fmt.Errorf("confdir '%s' does not exist", confdir)
+	}
+
+	globpaths, err := filepath.Glob(filepath.Join(confdir, "conf.d", "*.toml"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var paths []string
+	for _, s := range globpaths {
+		if isTemplateResourceFileShouldBeBuilt(s) {
+			paths = append(paths, s)
+		}
+	}
+
+	var lastError error
+	var tcs = make([]*TemplateResource, len(paths))
+
+	for i, s := range paths {
+		tcs[i], err = LoadTemplateResourceFile(confdir, s)
+		if err != nil {
+			lastError = err
+		}
+	}
+	if lastError != nil {
+		return tcs, paths, lastError
+	}
+
+	return tcs, paths, nil
+}
+
+func LoadTemplateResourceFile(confdir, name string) (*TemplateResource, error) {
+	if !filepath.IsAbs(name) {
+		name = filepath.Join(confdir, "conf.d", name)
+	}
+
 	p := &_TemplateResourceConfig{
 		TemplateResource: TemplateResource{
 			Gid: -1,
 			Uid: -1,
 		},
 	}
+
 	_, err := toml.DecodeFile(name, p)
 	if err != nil {
 		return nil, err
