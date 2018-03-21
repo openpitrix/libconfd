@@ -50,14 +50,15 @@ EXAMPLE:
 
 	app.Commands = []cli.Command{
 		{
-			Name:  "list",
-			Usage: "list enabled template resource",
+			Name:      "list",
+			Usage:     "list enabled template resource",
+			ArgsUsage: "[regexp]",
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
 				client := libconfd.NewFileBackendsClient(cfg.File)
 
-				libconfd.NewApplication(cfg, client).List()
+				libconfd.NewApplication(cfg, client).List(c.Args().First())
 				return
 			},
 		},
@@ -70,7 +71,7 @@ EXAMPLE:
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
 				client := libconfd.NewFileBackendsClient(cfg.File)
 
-				libconfd.NewApplication(cfg, client).Info(c.Args().First())
+				libconfd.NewApplication(cfg, client).Info(c.Args()...)
 				return
 			},
 		},

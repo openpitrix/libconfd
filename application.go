@@ -7,6 +7,7 @@ package libconfd
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -22,25 +23,45 @@ func NewApplication(cfg *Config, client Client) *Application {
 	}
 }
 
-func (p *Application) List() {
+func (p *Application) List(re string) {
 	_, paths, err := ListTemplateResource(p.cfg.ConfDir)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	for _, s := range paths {
-		fmt.Println(filepath.Base(s))
+		basename := filepath.Base(s)
+		if re == "" {
+			fmt.Println(basename)
+			continue
+		}
+		matched, err := regexp.MatchString(re, basename)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		if matched {
+			fmt.Println(basename)
+		}
 	}
 }
 
-func (p *Application) Info(name string) {
-	if !strings.HasSuffix(name, ".toml") {
-		name += ".toml"
+func (p *Application) Info(names ...string) {
+	if len(names) == 0 {
+		_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		names = paths
 	}
-	tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
-	if err != nil {
-		logger.Fatal(err)
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".toml") {
+			name += ".toml"
+		}
+		tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		fmt.Println(tc.TomlString())
 	}
-	fmt.Println(tc.TomlString())
 }
 
 func (p *Application) Make(name string) {
