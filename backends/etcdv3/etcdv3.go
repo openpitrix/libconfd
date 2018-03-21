@@ -18,6 +18,8 @@ import (
 	"openpitrix.io/libconfd"
 )
 
+const BackendType = "libconfd-backend-etcdv3"
+
 var logger = libconfd.GetLogger()
 
 func init() {
@@ -29,47 +31,12 @@ func init() {
 	)
 }
 
-type EtcdOptions func(*libconfd.BackendConfig)
-
-func applyOptions(cfg *libconfd.BackendConfig, opts ...EtcdOptions) *libconfd.BackendConfig {
-	for _, fn := range opts {
-		fn(cfg)
-	}
-	if len(cfg.Host) == 0 {
-		cfg.Host = []string{"127.0.0.1:2379"}
-	}
-	return cfg
-}
-
-func WitchMachines(node ...string) EtcdOptions {
-	return func(opt *libconfd.BackendConfig) {
-		opt.Host = append(opt.Host, node...)
-	}
-}
-
-func WitchBasicAuth(userName, password string) EtcdOptions {
-	return func(opt *libconfd.BackendConfig) {
-		opt.UserName = userName
-		opt.Password = password
-	}
-}
-
-func WitchCACert(caCert, cert, key string) EtcdOptions {
-	return func(opt *libconfd.BackendConfig) {
-		opt.ClientCAKeys = caCert
-		opt.ClientCert = cert
-		opt.ClientKey = key
-	}
-}
-
 // _EtcdClient is a wrapper around the etcd client
 type _EtcdClient struct {
 	cfg clientv3.Config
 }
 
-func NewEtcdClient(cfg *libconfd.BackendConfig, opts ...EtcdOptions) (libconfd.BackendClient, error) {
-	cfg = applyOptions(cfg.Clone(), opts...)
-
+func NewEtcdClient(cfg *libconfd.BackendConfig) (libconfd.BackendClient, error) {
 	etcdConfig := clientv3.Config{
 		Endpoints:            cfg.Host,
 		DialTimeout:          5 * time.Second,
@@ -117,7 +84,7 @@ func NewEtcdClient(cfg *libconfd.BackendConfig, opts ...EtcdOptions) (libconfd.B
 }
 
 func (c *_EtcdClient) Type() string {
-	return "libconfd-etcdv3"
+	return BackendType
 }
 
 func (c *_EtcdClient) WatchEnabled() bool {
