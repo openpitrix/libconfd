@@ -37,6 +37,9 @@ func SetLogger(new Logger) (old Logger) {
 //
 // See https://github.com/chai2010/logger
 type Logger interface {
+	Assert(condition bool, v ...interface{})
+	Assertln(condition bool, v ...interface{})
+	Assertf(condition bool, format string, v ...interface{})
 	Debug(v ...interface{})
 	Debugln(v ...interface{})
 	Debugf(format string, v ...interface{})
@@ -154,6 +157,22 @@ func (p *stdLogger) GetLevel() string {
 }
 func (p *stdLogger) SetLevel(new string) (old string) {
 	return p.setLevelByName(new)
+}
+
+func (p *stdLogger) Assert(condition bool, v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l && !condition {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprint(v...))
+	}
+}
+func (p *stdLogger) Assertln(condition bool, v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l && !condition {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintln(v...))
+	}
+}
+func (p *stdLogger) Assertf(condition bool, format string, v ...interface{}) {
+	if l := logDebugLevel; p.getLevel() <= l && !condition {
+		p.Output(2, "["+l.String()+"] "+fmt.Sprintf(format, v...))
+	}
 }
 
 func (p *stdLogger) Debug(v ...interface{}) {
