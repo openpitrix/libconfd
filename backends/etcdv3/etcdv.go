@@ -23,15 +23,15 @@ var logger = libconfd.GetLogger()
 func init() {
 	libconfd.RegisterBackendClient(
 		(*_EtcdClient)(nil).Type(),
-		func(cfg *libconfd.BeckendConfig) (libconfd.BackendClient, error) {
+		func(cfg *libconfd.BackendConfig) (libconfd.BackendClient, error) {
 			return NewEtcdClient(cfg)
 		},
 	)
 }
 
-type EtcdOptions func(*libconfd.BeckendConfig)
+type EtcdOptions func(*libconfd.BackendConfig)
 
-func applyOptions(cfg *libconfd.BeckendConfig, opts ...EtcdOptions) *libconfd.BeckendConfig {
+func applyOptions(cfg *libconfd.BackendConfig, opts ...EtcdOptions) *libconfd.BackendConfig {
 	for _, fn := range opts {
 		fn(cfg)
 	}
@@ -42,20 +42,20 @@ func applyOptions(cfg *libconfd.BeckendConfig, opts ...EtcdOptions) *libconfd.Be
 }
 
 func WitchMachines(node ...string) EtcdOptions {
-	return func(opt *libconfd.BeckendConfig) {
+	return func(opt *libconfd.BackendConfig) {
 		opt.Host = append(opt.Host, node...)
 	}
 }
 
 func WitchBasicAuth(userName, password string) EtcdOptions {
-	return func(opt *libconfd.BeckendConfig) {
+	return func(opt *libconfd.BackendConfig) {
 		opt.UserName = userName
 		opt.Password = password
 	}
 }
 
 func WitchCACert(caCert, cert, key string) EtcdOptions {
-	return func(opt *libconfd.BeckendConfig) {
+	return func(opt *libconfd.BackendConfig) {
 		opt.ClientCAKeys = caCert
 		opt.ClientCert = cert
 		opt.ClientKey = key
@@ -67,7 +67,7 @@ type _EtcdClient struct {
 	cfg clientv3.Config
 }
 
-func NewEtcdClient(cfg *libconfd.BeckendConfig, opts ...EtcdOptions) (libconfd.BackendClient, error) {
+func NewEtcdClient(cfg *libconfd.BackendConfig, opts ...EtcdOptions) (libconfd.BackendClient, error) {
 	cfg = applyOptions(cfg.Clone(), opts...)
 
 	etcdConfig := clientv3.Config{

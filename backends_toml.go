@@ -20,14 +20,14 @@ type TomlBackend struct {
 func init() {
 	RegisterBackendClient(
 		(*TomlBackend)(nil).Type(),
-		func(cfg *BeckendConfig) (BackendClient, error) {
+		func(cfg *BackendConfig) (BackendClient, error) {
 			p := NewTomlBackendClient(cfg)
 			return p, nil
 		},
 	)
 }
 
-func NewTomlBackendClient(cfg *BeckendConfig) *TomlBackend {
+func NewTomlBackendClient(cfg *BackendConfig) *TomlBackend {
 	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
 	return &TomlBackend{TOMLFile: cfg.Host[0]}
 }

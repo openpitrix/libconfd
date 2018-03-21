@@ -15,7 +15,7 @@ type tEnvClient struct{}
 func init() {
 	RegisterBackendClient(
 		(*tEnvClient)(nil).Type(),
-		func(cfg *BeckendConfig) (BackendClient, error) {
+		func(cfg *BackendConfig) (BackendClient, error) {
 			p := tNewEnvClient()
 			return p, nil
 		},

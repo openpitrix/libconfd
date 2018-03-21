@@ -10,7 +10,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type BeckendConfig struct {
+type BackendConfig struct {
 	Type string   `toml:"type" json:"type"`
 	Host []string `toml:"host" json:"host"`
 
@@ -22,7 +22,7 @@ type BeckendConfig struct {
 	ClientKey    string `toml:"client-key" json:"client-key"`
 }
 
-func (p *BeckendConfig) Clone() *BeckendConfig {
+func (p *BackendConfig) Clone() *BackendConfig {
 	var q = *p
 	q.Host = append([]string{}, p.Host...)
 	return &q
@@ -44,7 +44,7 @@ func MustNewBackendClient(file string) BackendClient {
 }
 
 func NewBackendClient(file string) (BackendClient, error) {
-	cfg, err := LoadBeckendConfig(file)
+	cfg, err := LoadBackendConfig(file)
 	if err != nil {
 		return nil, err
 	}
@@ -57,16 +57,16 @@ func NewBackendClient(file string) (BackendClient, error) {
 	return newClient(cfg)
 }
 
-func MustLoadBeckendConfig(path string) *BeckendConfig {
-	p, err := LoadBeckendConfig(path)
+func MustLoadBackendConfig(path string) *BackendConfig {
+	p, err := LoadBackendConfig(path)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	return p
 }
 
-func LoadBeckendConfig(path string) (p *BeckendConfig, err error) {
-	p = new(BeckendConfig)
+func LoadBackendConfig(path string) (p *BackendConfig, err error) {
+	p = new(BackendConfig)
 	_, err = toml.DecodeFile(path, p)
 	if err != nil {
 		return nil, err
@@ -76,9 +76,9 @@ func LoadBeckendConfig(path string) (p *BeckendConfig, err error) {
 
 func RegisterBackendClient(
 	typeName string,
-	newClient func(cfg *BeckendConfig) (BackendClient, error),
+	newClient func(cfg *BackendConfig) (BackendClient, error),
 ) {
 	_BackendClientMap[typeName] = newClient
 }
 
-var _BackendClientMap = map[string]func(cfg *BeckendConfig) (BackendClient, error){}
+var _BackendClientMap = map[string]func(cfg *BackendConfig) (BackendClient, error){}
