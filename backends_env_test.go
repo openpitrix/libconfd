@@ -12,6 +12,16 @@ import (
 // tEnvClient provides a shell for the env client
 type tEnvClient struct{}
 
+func init() {
+	RegisterBackendClient(
+		(*tEnvClient)(nil).Type(),
+		func(cfg *BeckendConfig) (BeckendClient, error) {
+			p := tNewEnvClient()
+			return p, nil
+		},
+	)
+}
+
 // tNewEnvClient returns a new client
 func tNewEnvClient() BeckendClient {
 	return new(tEnvClient)

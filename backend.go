@@ -4,7 +4,11 @@
 
 package libconfd
 
-import "github.com/BurntSushi/toml"
+import (
+	"fmt"
+
+	"github.com/BurntSushi/toml"
+)
 
 type BeckendConfig struct {
 	Type string `toml:"type" json:"type"`
@@ -34,10 +38,17 @@ func MustNewBackendsClient(file string) BeckendClient {
 }
 
 func NewBackendsClient(file string) (BeckendClient, error) {
-	cfg := MustLoadBeckendConfig(file)
-	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
+	cfg, err := LoadBeckendConfig(file)
+	if err != nil {
+		return nil, err
+	}
 
-	return NewTomlBackendClient(cfg), nil
+	newClient := _BackendClientMap[cfg.Type]
+	if newClient == nil {
+		return nil, fmt.Errorf("libconfd: unknown backend type %q", cfg.Type)
+	}
+
+	return newClient(cfg)
 }
 
 func MustLoadBeckendConfig(path string) *BeckendConfig {
@@ -56,3 +67,12 @@ func LoadBeckendConfig(path string) (p *BeckendConfig, err error) {
 	}
 	return p, nil
 }
+
+func RegisterBackendClient(
+	typeName string,
+	newClient func(cfg *BeckendConfig) (BeckendClient, error),
+) {
+	_BackendClientMap[typeName] = newClient
+}
+
+var _BackendClientMap = map[string]func(cfg *BeckendConfig) (BeckendClient, error){}

@@ -3,7 +3,7 @@
 # that can be found in the LICENSE file.
 
 # backend type
-type = "libconfd-builtin-toml"
+type = "libconfd-backend-toml"
 
 # backend address
 host = "./confd/backend-file.toml"
