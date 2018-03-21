@@ -44,12 +44,12 @@ func MakeAllTemplateResourceProcessor(
 
 	tcs, paths, err := ListTemplateResource(config.GetConfigDir())
 	if err != nil {
-		return nil, err
-	}
-
-	if len(paths) == 0 {
-		logger.Warning("Found no templates")
-		return nil, fmt.Errorf("Found no templates")
+		if len(paths) == 0 {
+			logger.Warning("Found no templates")
+			return nil, fmt.Errorf("Found no templates")
+		} else {
+			logger.Warning(err) // skip error
+		}
 	}
 
 	templates := make([]*TemplateResourceProcessor, len(paths))

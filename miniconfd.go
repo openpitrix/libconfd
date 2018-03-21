@@ -30,9 +30,7 @@ EXAMPLE:
    miniconfd getv key
    miniconfd tour
 
-   miniconfd run
-   miniconfd run-once
-   miniconfd run-noop`
+   miniconfd run`
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -111,6 +109,45 @@ EXAMPLE:
 				fmt.Println(tourTopic)
 			},
 		},
+
+		{
+			Name:  "run",
+			Usage: "run confd service",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "once",
+					Usage: "run with onetime flag",
+				},
+				cli.BoolFlag{
+					Name:  "noop",
+					Usage: "run with noop flag",
+				},
+				cli.BoolFlag{
+					Name:  "watch",
+					Usage: "run with watch mode",
+				},
+			},
+
+			Action: func(c *cli.Context) {
+				var opts = []libconfd.Options{
+					func(cfg *libconfd.Config) {
+						cfg.Onetime = c.Bool("once")
+					},
+					func(cfg *libconfd.Config) {
+						cfg.Noop = c.Bool("noop")
+					},
+					func(cfg *libconfd.Config) {
+						cfg.Watch = c.Bool("watch")
+					},
+				}
+
+				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
+				client := libconfd.NewFileBackendsClient(cfg.File)
+
+				libconfd.NewApplication(cfg, client).Run(opts...)
+				return
+			},
+		},
 	}
 
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
@@ -132,5 +169,7 @@ miniconfd getv /key
 miniconfd getv / /key
 
 miniconfd run
-miniconfd run-once
+miniconfd run -once
+miniconfd run -noop
+miniconfd run -once -noop
 `

@@ -116,10 +116,6 @@ func (p *Application) GetValues(keys ...string) {
 	}
 }
 
-func (p *Application) RunOnce(opts ...Options) {
-	panic("TODO")
-}
-
 func (p *Application) Run(opts ...Options) {
-	panic("TODO")
+	NewProcessor().Run(p.cfg, p.client, opts...)
 }
