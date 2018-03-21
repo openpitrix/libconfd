@@ -60,7 +60,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.MustNewBackendsClient(c.GlobalString("backend-config"))
+				client := libconfd.MustNewBackendClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).List(c.Args().First())
 				return
@@ -73,7 +73,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.MustNewBackendsClient(c.GlobalString("backend-config"))
+				client := libconfd.MustNewBackendClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Info(c.Args()...)
 				return
@@ -87,7 +87,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.MustNewBackendsClient(c.GlobalString("backend-config"))
+				client := libconfd.MustNewBackendClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Make(c.Args()...)
 				return
@@ -101,7 +101,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.MustNewBackendsClient(c.GlobalString("backend-config"))
+				client := libconfd.MustNewBackendClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).GetValues(c.Args()...)
 				return
@@ -136,7 +136,7 @@ EXAMPLE:
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-				client := libconfd.MustNewBackendsClient(c.GlobalString("backend-config"))
+				client := libconfd.MustNewBackendClient(c.GlobalString("backend-config"))
 
 				libconfd.NewApplication(cfg, client).Run(
 					func(cfg *libconfd.Config) {

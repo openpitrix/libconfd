@@ -29,15 +29,15 @@ type BeckendClient interface {
 	WatchEnabled() bool
 }
 
-func MustNewBackendsClient(file string) BeckendClient {
-	p, err := NewBackendsClient(file)
+func MustNewBackendClient(file string) BeckendClient {
+	p, err := NewBackendClient(file)
 	if err != nil {
 		logger.Panic(err)
 	}
 	return p
 }
 
-func NewBackendsClient(file string) (BeckendClient, error) {
+func NewBackendClient(file string) (BeckendClient, error) {
 	cfg, err := LoadBeckendConfig(file)
 	if err != nil {
 		return nil, err
