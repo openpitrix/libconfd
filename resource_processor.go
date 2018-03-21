@@ -83,6 +83,9 @@ func MakeAllTemplateResourceProcessor(
 			if bytes.Contains(data, []byte("# +build ignore")) {
 				return false
 			}
+			if bytes.Contains(data, []byte("# +build !"+_LIBCONFD_GOOS)) {
+				return false
+			}
 			if bytes.Contains(data, []byte("# +build "+_LIBCONFD_GOOS)) {
 				return true
 			}
