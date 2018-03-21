@@ -19,7 +19,7 @@ import (
 
 func main() {
 	cfg := libconfd.MustLoadConfig("./confd.toml")
-	c := NewFileBackendsClient("./confd-backend.toml")
+	client := libconfd.MustNewBackendsClient("./confd-backend.toml")
 
 	libconfd.NewProcessor().Run(cfg, client)
 }

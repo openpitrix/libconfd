@@ -9,7 +9,7 @@ import (
 )
 
 func TestTomlBackend(t *testing.T) {
-	c := NewFileBackendsClient("./confd-backend.toml")
+	c := MustNewBackendsClient("./confd-backend.toml")
 	m, err := c.GetValues([]string{""})
 	if err != nil {
 		t.Fatal(err)

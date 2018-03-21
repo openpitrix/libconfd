@@ -25,12 +25,19 @@ type BeckendClient interface {
 	WatchEnabled() bool
 }
 
-// NewFileBackendsClient create toml backend file client
-func NewFileBackendsClient(file string) BeckendClient {
+func MustNewBackendsClient(file string) BeckendClient {
+	p, err := NewBackendsClient(file)
+	if err != nil {
+		logger.Panic(err)
+	}
+	return p
+}
+
+func NewBackendsClient(file string) (BeckendClient, error) {
 	cfg := MustLoadBeckendConfig(file)
 	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
 
-	return NewTomlBackendClient(cfg)
+	return NewTomlBackendClient(cfg), nil
 }
 
 func MustLoadBeckendConfig(path string) *BeckendConfig {
