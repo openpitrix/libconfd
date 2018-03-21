@@ -39,6 +39,18 @@ EXAMPLE:
 			Usage:  "miniconfd config file",
 			EnvVar: "MINICONFD_CONFILE_FILE",
 		},
+		cli.StringFlag{
+			Name:   "backend-type",
+			Value:  "backend-type-toml",
+			Usage:  "miniconfd backend type",
+			EnvVar: "MINICONFD_BACKEND_TYPE",
+		},
+		cli.StringFlag{
+			Name:   "backend-config",
+			Value:  "backend-confd.toml",
+			Usage:  "miniconfd backend config file",
+			EnvVar: "MINICONFD_BACKEND_CONFILE_FILE",
+		},
 	}
 
 	app.Before = func(context *cli.Context) error {
@@ -172,4 +184,7 @@ miniconfd run
 miniconfd run -once
 miniconfd run -noop
 miniconfd run -once -noop
+
+GOOS=windows miniconfd list
+LIBCONFD_GOOS=windows miniconfd list
 `
