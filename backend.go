@@ -11,15 +11,21 @@ import (
 )
 
 type BeckendConfig struct {
-	Type string `toml:"type" json:"type"`
-	Host string `toml:"host" json:"host"`
+	Type string   `toml:"type" json:"type"`
+	Host []string `toml:"host" json:"host"`
 
-	User     string `toml:"user" json:"user"`
+	UserName string `toml:"user" json:"user"`
 	Password string `toml:"password" json:"password"`
 
 	ClientCAKeys string `toml:"client-ca-keys" json:"client-ca-keys"`
 	ClientCert   string `toml:"client-cert" json:"client-cert"`
 	ClientKey    string `toml:"client-key" json:"client-key"`
+}
+
+func (p *BeckendConfig) Clone() *BeckendConfig {
+	var q = *p
+	q.Host = append([]string{}, p.Host...)
+	return &q
 }
 
 type BackendClient interface {

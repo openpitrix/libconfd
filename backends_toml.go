@@ -29,7 +29,7 @@ func init() {
 
 func NewTomlBackendClient(cfg *BeckendConfig) *TomlBackend {
 	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
-	return &TomlBackend{TOMLFile: cfg.Host}
+	return &TomlBackend{TOMLFile: cfg.Host[0]}
 }
 
 func (_ *TomlBackend) Type() string {

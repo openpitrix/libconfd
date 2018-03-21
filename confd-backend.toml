@@ -6,7 +6,9 @@
 type = "libconfd-backend-toml"
 
 # backend address
-host = "./confd/backend-file.toml"
+host = [
+	"./confd/backend-file.toml",
+]
 
 # user name/password
 user = "root"
