@@ -4,40 +4,56 @@
 
 package libconfd
 
+import (
+	"fmt"
+)
+
 type Application struct {
-	cfg *Config
+	cfg    *Config
+	client Client
 }
 
 func NewApplication(cfg *Config, client Client) *Application {
 	return &Application{
-		cfg: cfg.Clone(),
+		cfg:    cfg.Clone(),
+		client: client,
 	}
-}
-
-func (p *Application) Main() {
-	panic("TODO")
 }
 
 func (p *Application) List() []string {
 	panic("TODO")
 }
 
-func (p *Application) Info(name string) *TemplateResource {
+func (p *Application) Info(name string) {
 	panic("TODO")
 }
 
-func (p *Application) Make(name string) error {
+func (p *Application) Make(name string) {
 	panic("TODO")
 }
 
-func (p *Application) GetValue(key string) string {
+func (p *Application) GetValues(keys ...string) {
+	m, err := p.client.GetValues(keys)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	var maxLen = 1
+	for i := range keys {
+		if len(keys[i]) > maxLen {
+			maxLen = len(keys[i])
+		}
+	}
+
+	for _, k := range keys {
+		fmt.Printf("%-*s => %s\n", maxLen, k, m[k])
+	}
+}
+
+func (p *Application) RunOnce(opts ...Options) {
 	panic("TODO")
 }
 
-func (p *Application) RunOnce(opts ...Options) error {
-	panic("TODO")
-}
-
-func (p *Application) Run(opts ...Options) error {
+func (p *Application) Run(opts ...Options) {
 	panic("TODO")
 }

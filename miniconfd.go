@@ -12,7 +12,6 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
-
 	"openpitrix.io/libconfd"
 )
 
@@ -24,14 +23,16 @@ func main() {
 
 	app.UsageText = `miniconfd [global options] command [options] [args...]
 
-Example:
+EXAMPLE:
    miniconfd list
    miniconfd info
    miniconfd make target
    miniconfd getv key
    miniconfd tour
 
-   miniconfd`
+   miniconfd run
+   miniconfd run-once
+   miniconfd run-noop`
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -90,14 +91,14 @@ Example:
 
 		{
 			Name:      "getv",
-			Usage:     "get value from backend by key",
+			Usage:     "get values from backend by keys",
 			ArgsUsage: "key",
 
 			Action: func(c *cli.Context) {
 				cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
 				client := libconfd.NewFileBackendsClient(cfg.File)
 
-				libconfd.NewApplication(cfg, client).GetValue(c.Args().First())
+				libconfd.NewApplication(cfg, client).GetValues(c.Args()...)
 				return
 			},
 		},
@@ -109,18 +110,6 @@ Example:
 				fmt.Println(tourTopic)
 			},
 		},
-	}
-
-	app.Action = func(c *cli.Context) {
-		if c.NArg() > 0 {
-			fmt.Fprintf(c.App.Writer, "invalid: %s; try -h\n", c.Args())
-			return
-		}
-		cfg := libconfd.MustLoadConfig(c.GlobalString("config"))
-		client := libconfd.NewFileBackendsClient(cfg.File)
-
-		libconfd.NewApplication(cfg, client).Main()
-		return
 	}
 
 	app.CommandNotFound = func(ctx *cli.Context, command string) {
@@ -139,6 +128,8 @@ miniconfd make simple.windows
 
 miniconfd getv /
 miniconfd getv /key
+miniconfd getv / /key
 
-miniconfd
+miniconfd run
+miniconfd run-once
 `

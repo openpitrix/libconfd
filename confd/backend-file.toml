@@ -2,6 +2,7 @@
 # Use of this source code is governed by a Apache license
 # that can be found in the LICENSE file.
 
+"/" = "root"
 "/key" = "foobar"
 "/database/host" = "127.0.0.1"
 "/database/password" = "p@sSw0rd"
