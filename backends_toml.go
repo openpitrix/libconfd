@@ -11,6 +11,8 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+const TomlBackendType = "libconfd-backend-toml"
+
 var _ BackendClient = (*TomlBackend)(nil)
 
 type TomlBackend struct {
@@ -33,7 +35,7 @@ func NewTomlBackendClient(cfg *BackendConfig) *TomlBackend {
 }
 
 func (_ *TomlBackend) Type() string {
-	return "libconfd-backend-toml"
+	return TomlBackendType
 }
 
 func (_ *TomlBackend) WatchEnabled() bool {
