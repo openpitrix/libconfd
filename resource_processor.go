@@ -23,7 +23,7 @@ type TemplateResourceProcessor struct {
 	TemplateResource
 
 	path          string
-	client        Client
+	client        BeckendClient
 	store         *KVStore
 	stageFile     *os.File
 	templateFunc  *TemplateFunc
@@ -35,7 +35,7 @@ type TemplateResourceProcessor struct {
 }
 
 func MakeAllTemplateResourceProcessor(
-	config *Config, client Client,
+	config *Config, client BeckendClient,
 ) (
 	[]*TemplateResourceProcessor,
 	error,
@@ -64,7 +64,7 @@ func MakeAllTemplateResourceProcessor(
 
 // NewTemplateResourceProcessor creates a NewTemplateResourceProcessor.
 func NewTemplateResourceProcessor(
-	path string, config *Config, client Client, res *TemplateResource,
+	path string, config *Config, client BeckendClient, res *TemplateResource,
 ) *TemplateResourceProcessor {
 	logger.Debug("Loading template resource from " + path)
 

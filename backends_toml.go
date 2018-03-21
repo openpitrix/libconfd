@@ -11,7 +11,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-var _ Client = (*TomlBackend)(nil)
+var _ BeckendClient = (*TomlBackend)(nil)
 
 type TomlBackend struct {
 	TOMLFile string

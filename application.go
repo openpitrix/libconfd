@@ -15,10 +15,10 @@ import (
 
 type Application struct {
 	cfg    *Config
-	client Client
+	client BeckendClient
 }
 
-func NewApplication(cfg *Config, client Client) *Application {
+func NewApplication(cfg *Config, client BeckendClient) *Application {
 	return &Application{
 		cfg:    cfg.Clone(),
 		client: client,

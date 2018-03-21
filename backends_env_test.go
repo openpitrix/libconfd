@@ -13,7 +13,7 @@ import (
 type tEnvClient struct{}
 
 // tNewEnvClient returns a new client
-func tNewEnvClient() Client {
+func tNewEnvClient() BeckendClient {
 	return new(tEnvClient)
 }
 

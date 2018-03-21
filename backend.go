@@ -18,7 +18,7 @@ type BeckendConfig struct {
 	ClientKey    string `toml:"client-key" json:"client-key"`
 }
 
-type Client interface {
+type BeckendClient interface {
 	Type() string
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
@@ -26,7 +26,7 @@ type Client interface {
 }
 
 // NewFileBackendsClient create toml backend file client
-func NewFileBackendsClient(file string) Client {
+func NewFileBackendsClient(file string) BeckendClient {
 	cfg := MustLoadBeckendConfig(file)
 	logger.Assert(cfg.Type == (*TomlBackend)(nil).Type())
 
