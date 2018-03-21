@@ -8,6 +8,8 @@
 mini confd lib, based on [confd](https://github.com/kelseyhightower/confd)/[memkv](https://github.com/kelseyhightower/memkv)/[secconf](https://github.com/xordataexchange/crypt)/[logger](https://github.com/chai2010/logger).
 
 
+## Example
+
 ```go
 package main
 
@@ -22,3 +24,11 @@ func main() {
 	libconfd.NewProcessor().Run(cfg, client)
 }
 ```
+
+## miniconfd (only support toml backend)
+
+```
+$ go run miniconfd.go -h
+```
+
+See [miniconfd.go](miniconfd.go)
