@@ -6,6 +6,7 @@ package libconfd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,14 +33,11 @@ type Config struct {
 	Prefix string `toml:"prefix" json:"prefix"`
 
 	// sync without check_cmd and reload_cmd.
-	SyncOnly bool `toml:"sync-only" json:"sync-only"`
+	SyncOnly bool `toml:"sync_only" json:"sync_only"`
 
 	// level which confd should log messages
 	// DEBUG/INFO/WARN/ERROR/PANIC
-	LogLevel string `toml:"log-level" json:"log-level"`
-
-	// the TOML backend file to watch for changes
-	//File string `toml:"file" json:"file"`
+	LogLevel string `toml:"log_level" json:"log_level"`
 
 	// run once and exit
 	Onetime bool `toml:"onetime" json:"onetime"`
@@ -48,20 +46,20 @@ type Config struct {
 	Watch bool `toml:"watch" json:"watch"`
 
 	// keep staged files
-	KeepStageFile bool `toml:"keep-stage-file" json:"keep-stage-file"`
+	KeepStageFile bool `toml:"keep_stage_file" json:"keep_stage_file"`
 
 	// PGP secret keyring (for use with crypt functions)
-	PGPPrivateKey string `toml:"pgp-private-key" json:"pgp-private-key"`
+	PGPPrivateKey string `toml:"pgp_private_key" json:"pgp_private_key"`
 
 	// ----------------------------------------------------
 
 	FuncMap        template.FuncMap                               `toml:"-" json:"-"`
 	FuncMapUpdater func(m template.FuncMap, basefn *TemplateFunc) `toml:"-" json:"-"`
 
-	HookAbsKeyAdjuster   func(absKey string) (realKey string) `toml:"-" json:"-"`
-	HookOnCheckCmdError  func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookOnReloadCmdError func(trName, cmd string, err error)  `toml:"-" json:"-"`
-	HookOnError          func(trName string, err error)       `toml:"-" json:"-"`
+	HookAbsKeyAdjuster  func(absKey string) (realKey string) `toml:"-" json:"-"`
+	HookOnCheckCmdDone  func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookOnReloadCmdDone func(trName, cmd string, err error)  `toml:"-" json:"-"`
+	HookOnUpdateDone    func(trName string, err error)       `toml:"-" json:"-"`
 }
 
 const defaultConfigContent = `
@@ -107,12 +105,12 @@ func newDefaultConfig() (p *Config) {
 	p = new(Config)
 	_, err := toml.Decode(defaultConfigContent, p)
 	if err != nil {
-		logger.Panic(err)
+		GetLogger().Panic(err)
 	}
 	if !filepath.IsAbs(p.ConfDir) {
 		absdir, err := filepath.Abs(".")
 		if err != nil {
-			logger.Panic(err)
+			GetLogger().Panic(err)
 		}
 		p.ConfDir = filepath.Clean(filepath.Join(absdir, p.ConfDir))
 	}
@@ -122,7 +120,7 @@ func newDefaultConfig() (p *Config) {
 func MustLoadConfig(path string) *Config {
 	p, err := LoadConfig(path)
 	if err != nil {
-		logger.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 	return p
 }
@@ -143,6 +141,19 @@ func LoadConfig(path string) (p *Config, err error) {
 	return p, nil
 }
 
+func LoadConfigFromJsonString(s string) (p *Config, err error) {
+	p = new(Config)
+	if err := json.Unmarshal([]byte(s), p); err != nil {
+		return nil, err
+	}
+
+	if !filepath.IsAbs(p.ConfDir) {
+		err = fmt.Errorf("libconfd: ConfDir is not abs path: %s", p.ConfDir)
+		return
+	}
+	return p, nil
+}
+
 func (p *Config) Valid() error {
 	if !filepath.IsAbs(p.ConfDir) {
 		return fmt.Errorf("ConfDir is not abs path: %s", p.ConfDir)
@@ -155,7 +166,7 @@ func (p *Config) Valid() error {
 	if p.Interval < 0 {
 		return fmt.Errorf("invalid Interval: %d", p.Interval)
 	}
-	if !newLogLevel(p.LogLevel).Valid() {
+	if p.LogLevel != "" && !newLogLevel(p.LogLevel).Valid() {
 		return fmt.Errorf("invalid LogLevel: %s", p.LogLevel)
 	}
 

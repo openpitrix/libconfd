@@ -25,7 +25,7 @@ func (call *Call) done() {
 	default:
 		// We don't want to block here. It is the caller's responsibility to make
 		// sure the channel has enough buffer space. See comment in Go().
-		logger.Debugln("libconfd: discarding Call reply due to insufficient Done chan capacity")
+		GetLogger().Debugln("libconfd: discarding Call reply due to insufficient Done chan capacity")
 	}
 }
 
@@ -39,7 +39,7 @@ type Processor struct {
 
 func (p *Processor) isClosing() bool {
 	if p.closeChan == nil {
-		logger.Panic("closeChan is nil")
+		GetLogger().Panic("closeChan is nil")
 	}
 	select {
 	case <-p.closeChan:
@@ -72,7 +72,9 @@ func (p *Processor) clearPendingCall() {
 	defer p.pendingMutex.Unlock()
 
 	for _, call := range p.pending {
-		call.Error = errors.New("libconfd: processor is shut down")
+		err := errors.New("libconfd: processor is shut down")
+		GetLogger().Error(err)
+		call.Error = err
 		call.done()
 	}
 
@@ -81,7 +83,11 @@ func (p *Processor) clearPendingCall() {
 
 func (p *Processor) checkBackendClient(client BackendClient) error {
 	_, err := client.GetValues([]string{"/"})
-	return err
+	if err != nil {
+		GetLogger().Error(err)
+		return err
+	}
+	return nil
 }
 
 func NewProcessor() *Processor {
@@ -107,8 +113,8 @@ func NewProcessor() *Processor {
 
 			p.wg.Add(1)
 			go func() {
-				logger.Debugln("process start")
-				defer logger.Debugln("process done")
+				GetLogger().Debugln("process start")
+				defer GetLogger().Debugln("process done")
 
 				defer p.wg.Done()
 				defer call.done()
@@ -123,7 +129,7 @@ func NewProcessor() *Processor {
 
 func (p *Processor) Go(cfg *Config, client BackendClient, opts ...Options) *Call {
 	if client == nil {
-		logger.Panic("client is nil")
+		GetLogger().Panic("client is nil")
 	}
 
 	call := new(Call)
@@ -133,17 +139,16 @@ func (p *Processor) Go(cfg *Config, client BackendClient, opts ...Options) *Call
 	call.Done = make(chan *Call, 10) // buffered.
 
 	if err := cfg.Valid(); err != nil {
+		GetLogger().Error(err)
 		call.Error = err
 		call.done()
 		return call
 	}
 
-	logger.SetLevel(cfg.LogLevel)
-
+	// just print the when check failed
 	if err := p.checkBackendClient(client); err != nil {
-		call.Error = err
-		call.done()
-		return call
+		GetLogger().Warning(err)
+		// donot return
 	}
 
 	p.addPendingCall(call)
@@ -152,16 +157,20 @@ func (p *Processor) Go(cfg *Config, client BackendClient, opts ...Options) *Call
 
 func (p *Processor) Run(cfg *Config, client BackendClient, opts ...Options) error {
 	if err := cfg.Valid(); err != nil {
+		GetLogger().Error(err)
 		return err
 	}
 	if client == nil {
-		logger.Panic("client is nil")
+		GetLogger().Panic("client is nil")
 	}
 
-	logger.SetLevel(cfg.LogLevel)
-
 	call := <-p.Go(cfg, client, opts...).Done
-	return call.Error
+	if err := call.Error; err != nil {
+		GetLogger().Error(err)
+		return err
+	}
+
+	return nil
 }
 
 func (p *Processor) Close() error {
@@ -184,7 +193,7 @@ func (p *Processor) process(call *Call) {
 func (p *Processor) runOnce(call *Call) {
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		call.Error = err
 		return
 	}
@@ -195,7 +204,7 @@ func (p *Processor) runOnce(call *Call) {
 		}
 
 		if err := t.Process(call); err != nil {
-			logger.Error(err)
+			GetLogger().Error(err)
 		}
 	}
 
@@ -205,7 +214,7 @@ func (p *Processor) runOnce(call *Call) {
 func (p *Processor) runInIntervalMode(call *Call) {
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
-		logger.Warning(err)
+		GetLogger().Warning(err)
 		call.Error = err
 		return
 	}
@@ -221,7 +230,7 @@ func (p *Processor) runInIntervalMode(call *Call) {
 			}
 
 			if err := t.Process(call); err != nil {
-				logger.Error(err)
+				GetLogger().Error(err)
 				continue
 			}
 		}
@@ -233,7 +242,7 @@ func (p *Processor) runInIntervalMode(call *Call) {
 func (p *Processor) runInWatchMode(call *Call) {
 	ts, err := MakeAllTemplateResourceProcessor(call.Config, call.Client)
 	if err != nil {
-		logger.Warning(err)
+		GetLogger().Warning(err)
 		return
 	}
 
@@ -268,19 +277,27 @@ func (p *Processor) monitorPrefix(
 ) {
 	keys := t.getAbsKeys()
 
+	// hook keys
+	if fn := call.Config.HookAbsKeyAdjuster; fn != nil {
+		for i, k := range keys {
+			keys[i] = fn(k)
+		}
+	}
+
 	for {
 		if p.isClosing() {
 			return
 		}
 
+		// watch some key changed
 		index, err := t.client.WatchPrefix(t.Prefix, keys, t.lastIndex, stopChan)
 		if err != nil {
-			logger.Error(err)
+			GetLogger().Error(err)
 		}
 
 		t.lastIndex = index
 		if err := t.Process(call); err != nil {
-			logger.Error(err)
+			GetLogger().Error(err)
 		}
 	}
 }

@@ -25,19 +25,25 @@ type TemplateFunc struct {
 	FuncMap       map[string]interface{}
 	Store         *KVStore
 	PGPPrivateKey []byte
+
+	HookKeyAdjuster func(key string) (realKey string)
 }
 
 var _TemplateFunc_initFuncMap func(p *TemplateFunc) = nil
 
-func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) *TemplateFunc {
+func NewTemplateFunc(
+	store *KVStore, pgpPrivateKey []byte,
+	hookKeyAdjuster func(key string) (realKey string),
+) *TemplateFunc {
 	p := &TemplateFunc{
-		FuncMap:       map[string]interface{}{},
-		Store:         store,
-		PGPPrivateKey: pgpPrivateKey,
+		FuncMap:         map[string]interface{}{},
+		Store:           store,
+		PGPPrivateKey:   pgpPrivateKey,
+		HookKeyAdjuster: hookKeyAdjuster,
 	}
 
 	if _TemplateFunc_initFuncMap == nil {
-		logger.Panic("_TemplateFunc_initFuncMap missing")
+		GetLogger().Panic("_TemplateFunc_initFuncMap missing")
 	}
 
 	_TemplateFunc_initFuncMap(p)
@@ -49,120 +55,182 @@ func NewTemplateFunc(store *KVStore, pgpPrivateKey []byte) *TemplateFunc {
 // ----------------------------------------------------------------------------
 
 func (p TemplateFunc) Exists(key string) bool {
+	if p.HookKeyAdjuster != nil {
+		key = p.HookKeyAdjuster(key)
+	}
 	return p.Store.Exists(key)
 }
 
 func (p TemplateFunc) Ls(filepath string) []string {
+	if p.HookKeyAdjuster != nil {
+		filepath = p.HookKeyAdjuster(filepath)
+	}
 	return p.Store.List(filepath)
 }
 
 func (p TemplateFunc) Lsdir(filepath string) []string {
+	if p.HookKeyAdjuster != nil {
+		filepath = p.HookKeyAdjuster(filepath)
+	}
 	return p.Store.ListDir(filepath)
 }
 
-func (p TemplateFunc) Get(key string) (KVPair, error) {
-	if v, ok := p.Store.Get(key); ok {
-		return v, nil
+func (p TemplateFunc) Get(key string) KVPair {
+	if p.HookKeyAdjuster != nil {
+		key = p.HookKeyAdjuster(key)
 	}
-	return KVPair{}, fmt.Errorf("key not exists")
-}
-
-func (p TemplateFunc) Gets(pattern string) ([]KVPair, error) {
-	return p.Store.GetAll(pattern)
-}
-
-func (p TemplateFunc) Getv(key string, v ...string) (string, error) {
-	if v, ok := p.Store.GetValue(key, v...); ok {
-		return v, nil
+	v, ok := p.Store.Get(key)
+	if !ok {
+		GetLogger().Error("key not exits:", key)
+		return KVPair{}
 	}
-	return "", fmt.Errorf("key not exists")
+	return v
 }
 
-func (p TemplateFunc) Getvs(pattern string) ([]string, error) {
-	return p.Store.GetAllValues(pattern)
+func (p TemplateFunc) Gets(pattern string) []KVPair {
+	if p.HookKeyAdjuster != nil {
+		pattern = p.HookKeyAdjuster(pattern)
+	}
+	v, err := p.Store.GetAll(pattern)
+	if err != nil {
+		GetLogger().Error(err)
+		return nil
+	}
+	return v
+}
+
+func (p TemplateFunc) Getv(key string, v ...string) string {
+	if p.HookKeyAdjuster != nil {
+		key = p.HookKeyAdjuster(key)
+	}
+
+	value, ok := p.Store.GetValue(key, v...)
+	if !ok {
+		GetLogger().Error("key not exits:", key)
+		return ""
+	}
+	return value
+}
+
+func (p TemplateFunc) Getvs(pattern string) []string {
+	if p.HookKeyAdjuster != nil {
+		pattern = p.HookKeyAdjuster(pattern)
+	}
+	v, err := p.Store.GetAllValues(pattern)
+	if err != nil {
+		GetLogger().Error(err)
+		return nil
+	}
+	return v
 }
 
 // ----------------------------------------------------------------------------
 // Crypt func
 // ----------------------------------------------------------------------------
 
-func (p TemplateFunc) Cget(key string) (KVPair, error) {
+func (p TemplateFunc) Cget(key string) KVPair {
 	if len(p.PGPPrivateKey) == 0 {
-		return KVPair{}, fmt.Errorf("PGPPrivateKey is empty")
+		err := fmt.Errorf("PGPPrivateKey is empty")
+		GetLogger().Error(err)
+		return KVPair{}
 	}
 
-	kv, err := p.FuncMap["get"].(func(string) (KVPair, error))(key)
-	if err != nil {
-		return KVPair{}, err
+	if p.HookKeyAdjuster != nil {
+		key = p.HookKeyAdjuster(key)
+	}
+	kv, ok := p.Store.Get(key)
+	if !ok {
+		return KVPair{}
 	}
 
 	var b []byte
-	b, err = secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
+	b, err := secconfDecode([]byte(kv.Value), bytes.NewBuffer(p.PGPPrivateKey))
 	if err != nil {
-		return KVPair{}, err
+		GetLogger().Error(err)
+		return KVPair{}
 	}
 
 	kv.Value = string(b)
-	return kv, nil
+	return kv
 }
 
-func (p TemplateFunc) Cgets(pattern string) ([]KVPair, error) {
+func (p TemplateFunc) Cgets(pattern string) []KVPair {
 	if len(p.PGPPrivateKey) == 0 {
-		return nil, fmt.Errorf("PGPPrivateKey is empty")
+		err := fmt.Errorf("PGPPrivateKey is empty")
+		GetLogger().Error(err)
+		return nil
 	}
 
-	kvs, err := p.FuncMap["gets"].(func(string) ([]KVPair, error))(pattern)
+	if p.HookKeyAdjuster != nil {
+		pattern = p.HookKeyAdjuster(pattern)
+	}
+	kvs, err := p.Store.GetAll(pattern)
 	if err != nil {
-		return nil, err
+		GetLogger().Error(err)
+		return nil
 	}
 
 	for i := range kvs {
 		b, err := secconfDecode([]byte(kvs[i].Value), bytes.NewBuffer(p.PGPPrivateKey))
 		if err != nil {
-			return nil, err
+			GetLogger().Error(err)
+			return nil
 		}
 		kvs[i].Value = string(b)
 	}
-	return kvs, nil
+	return kvs
 }
 
-func (p TemplateFunc) Cgetv(key string) (string, error) {
+func (p TemplateFunc) Cgetv(key string) string {
 	if len(p.PGPPrivateKey) == 0 {
-		return "", fmt.Errorf("PGPPrivateKey is empty")
+		err := fmt.Errorf("PGPPrivateKey is empty")
+		GetLogger().Error(err)
+		return ""
 	}
 
-	v, err := p.FuncMap["getv"].(func(string, ...string) (string, error))(key)
-	if err != nil {
-		return "", err
+	if p.HookKeyAdjuster != nil {
+		key = p.HookKeyAdjuster(key)
+	}
+	v, ok := p.Store.GetValue(key)
+	if !ok {
+		return ""
 	}
 
 	var b []byte
-	b, err = secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
+	b, err := secconfDecode([]byte(v), bytes.NewBuffer(p.PGPPrivateKey))
 	if err != nil {
-		return "", err
+		GetLogger().Error(err)
+		return ""
 	}
 
-	return string(b), err
+	return string(b)
 }
 
-func (p TemplateFunc) Cgetvs(pattern string) ([]string, error) {
+func (p TemplateFunc) Cgetvs(pattern string) []string {
 	if len(p.PGPPrivateKey) == 0 {
-		return nil, fmt.Errorf("PGPPrivateKey is empty")
+		err := fmt.Errorf("PGPPrivateKey is empty")
+		GetLogger().Error(err)
+		return nil
 	}
 
-	vs, err := p.FuncMap["getvs"].(func(string) ([]string, error))(pattern)
+	if p.HookKeyAdjuster != nil {
+		pattern = p.HookKeyAdjuster(pattern)
+	}
+	vs, err := p.Store.GetAllValues(pattern)
 	if err != nil {
-		return nil, err
+		GetLogger().Error(err)
+		return nil
 	}
 
 	for i := range vs {
 		b, err := secconfDecode([]byte(vs[i]), bytes.NewBuffer(p.PGPPrivateKey))
 		if err != nil {
-			return nil, err
+			GetLogger().Error(err)
+			return nil
 		}
 		vs[i] = string(b)
 	}
-	return vs, nil
+	return vs
 }
 
 // ----------------------------------------------------------------------------
@@ -177,16 +245,24 @@ func (_ TemplateFunc) Split(s, sep string) []string {
 	return strings.Split(s, sep)
 }
 
-func (_ TemplateFunc) Json(data string) (map[string]interface{}, error) {
+func (_ TemplateFunc) Json(data string) map[string]interface{} {
 	var ret map[string]interface{}
 	err := json.Unmarshal([]byte(data), &ret)
-	return ret, err
+	if err != nil {
+		GetLogger().Error(err)
+		return nil
+	}
+	return ret
 }
 
-func (_ TemplateFunc) JsonArray(data string) ([]interface{}, error) {
+func (_ TemplateFunc) JsonArray(data string) []interface{} {
 	var ret []interface{}
 	err := json.Unmarshal([]byte(data), &ret)
-	return ret, err
+	if err != nil {
+		GetLogger().Error(err)
+		return nil
+	}
+	return ret
 }
 
 func (_ TemplateFunc) Dir(path string) string {
@@ -195,19 +271,21 @@ func (_ TemplateFunc) Dir(path string) string {
 
 // Map creates a key-value map of string -> interface{}
 // The i'th is the key and the i+1 is the value
-func (_ TemplateFunc) Map(values ...interface{}) (map[string]interface{}, error) {
+func (_ TemplateFunc) Map(values ...interface{}) map[string]interface{} {
 	if len(values)%2 != 0 {
-		return nil, errors.New("invalid map call")
+		GetLogger().Error(errors.New("invalid map call"))
+		return nil
 	}
 	dict := make(map[string]interface{}, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		key, ok := values[i].(string)
 		if !ok {
-			return nil, errors.New("map keys must be strings")
+			GetLogger().Error(errors.New("map keys must be strings"))
+			return nil
 		}
 		dict[key] = values[i+1]
 	}
-	return dict, nil
+	return dict
 }
 
 // getenv retrieves the value of the environment variable named by the key.
@@ -254,6 +332,7 @@ func (_ TemplateFunc) TrimSuffix(s, suffix string) string {
 func (_ TemplateFunc) LookupIP(data string) []string {
 	ips, err := net.LookupIP(data)
 	if err != nil {
+		GetLogger().Error(err)
 		return nil
 	}
 	// "Cast" IPs into strings and sort the array
@@ -269,6 +348,7 @@ func (_ TemplateFunc) LookupIP(data string) []string {
 func (_ TemplateFunc) LookupSRV(service, proto, name string) []*net.SRV {
 	_, s, err := net.LookupSRV(service, proto, name)
 	if err != nil {
+		GetLogger().Error(err)
 		return nil
 	}
 
@@ -289,13 +369,22 @@ func (_ TemplateFunc) Base64Encode(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
 }
 
-func (_ TemplateFunc) Base64Decode(data string) (string, error) {
+func (_ TemplateFunc) Base64Decode(data string) string {
 	s, err := base64.StdEncoding.DecodeString(data)
-	return string(s), err
+	if err != nil {
+		GetLogger().Error(err)
+		return ""
+	}
+	return string(s)
 }
 
-func (_ TemplateFunc) ParseBool(s string) (bool, error) {
-	return strconv.ParseBool(s)
+func (_ TemplateFunc) ParseBool(s string) bool {
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		GetLogger().Error(err)
+		return false
+	}
+	return v
 }
 
 // reverse returns the array in reversed order
@@ -356,8 +445,13 @@ func (_ TemplateFunc) Seq(first, last int) []int {
 	return arr
 }
 
-func (_ TemplateFunc) Atoi(s string) (int, error) {
-	return strconv.Atoi(s)
+func (_ TemplateFunc) Atoi(s string) int {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		GetLogger().Error(err)
+		return 0
+	}
+	return v
 }
 
 // ----------------------------------------------------------------------------
