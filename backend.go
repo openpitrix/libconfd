@@ -5,6 +5,7 @@
 package libconfd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/BurntSushi/toml"
@@ -17,9 +18,11 @@ type BackendConfig struct {
 	UserName string `toml:"user" json:"user"`
 	Password string `toml:"password" json:"password"`
 
-	ClientCAKeys string `toml:"client-ca-keys" json:"client-ca-keys"`
-	ClientCert   string `toml:"client-cert" json:"client-cert"`
-	ClientKey    string `toml:"client-key" json:"client-key"`
+	ClientCAKeys string `toml:"client_ca_keys" json:"client_ca_keys"`
+	ClientCert   string `toml:"client_cert" json:"client_cert"`
+	ClientKey    string `toml:"client_key" json:"client_key"`
+
+	HookKeyAdjuster func(key string) (realKey string) `toml:"-" json:"-"`
 }
 
 func (p *BackendConfig) Clone() *BackendConfig {
@@ -33,12 +36,13 @@ type BackendClient interface {
 	GetValues(keys []string) (map[string]string, error)
 	WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error)
 	WatchEnabled() bool
+	Close() error
 }
 
 func MustNewBackendClient(cfg *BackendConfig, opts ...func(*BackendConfig)) BackendClient {
 	p, err := NewBackendClient(cfg, opts...)
 	if err != nil {
-		logger.Panic(err)
+		GetLogger().Panic(err)
 	}
 	return p
 }
@@ -60,7 +64,7 @@ func NewBackendClient(cfg *BackendConfig, opts ...func(*BackendConfig)) (Backend
 func MustLoadBackendConfig(path string) *BackendConfig {
 	p, err := LoadBackendConfig(path)
 	if err != nil {
-		logger.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 	return p
 }
@@ -69,6 +73,14 @@ func LoadBackendConfig(path string) (p *BackendConfig, err error) {
 	p = new(BackendConfig)
 	_, err = toml.DecodeFile(path, p)
 	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func LoadBackendConfigFromJsonString(s string) (p *BackendConfig, err error) {
+	p = new(BackendConfig)
+	if err := json.Unmarshal([]byte(s), p); err != nil {
 		return nil, err
 	}
 	return p, nil

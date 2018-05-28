@@ -2,8 +2,7 @@
 // Use of this source code is governed by a Apache license
 // that can be found in the LICENSE file.
 
-// Package etcd provides etcd backends client for libconfd.
-package etcd
+package backends
 
 import (
 	"context"
@@ -11,6 +10,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -18,22 +18,28 @@ import (
 	"openpitrix.io/libconfd"
 )
 
-const BackendType = "libconfd-backend-etcdv3"
+var (
+	_ libconfd.BackendClient = (*_EtcdClient)(nil)
+)
 
-var logger = libconfd.GetLogger()
+const Etcdv3BackendType = "libconfd-backend-etcdv3"
 
 func init() {
 	libconfd.RegisterBackendClient(
-		(*_EtcdClient)(nil).Type(),
+		Etcdv3BackendType,
 		func(cfg *libconfd.BackendConfig) (libconfd.BackendClient, error) {
 			return NewEtcdClient(cfg)
 		},
 	)
 }
 
-// _EtcdClient is a wrapper around the etcd client
 type _EtcdClient struct {
 	cfg clientv3.Config
+
+	clientPoolMutex sync.Mutex
+	clientPool      []*clientv3.Client
+
+	hookKeyAdjuster func(key string) (realKey string)
 }
 
 func NewEtcdClient(cfg *libconfd.BackendConfig) (libconfd.BackendClient, error) {
@@ -80,11 +86,66 @@ func NewEtcdClient(cfg *libconfd.BackendConfig) (libconfd.BackendClient, error) 
 		etcdConfig.TLS = tlsConfig
 	}
 
-	return &_EtcdClient{etcdConfig}, nil
+	p := &_EtcdClient{
+		cfg:             etcdConfig,
+		hookKeyAdjuster: cfg.HookKeyAdjuster,
+	}
+
+	return p, nil
+}
+
+func (c *_EtcdClient) Close() error {
+	c.clientPoolMutex.Lock()
+	defer c.clientPoolMutex.Unlock()
+
+	var lastErr error
+	for _, client := range c.clientPool {
+		if err := client.Close(); err != nil {
+			lastErr = err
+		}
+	}
+	c.clientPool = c.clientPool[:0]
+
+	if lastErr != nil {
+		return lastErr
+	}
+	return nil
+}
+
+func (c *_EtcdClient) getEtcdClient() (*clientv3.Client, error) {
+	c.clientPoolMutex.Lock()
+	defer c.clientPoolMutex.Unlock()
+
+	if n := len(c.clientPool); n > 0 {
+		x := c.clientPool[n-1]
+		c.clientPool = c.clientPool[:n-1]
+		return x, nil
+	}
+
+	client, err := clientv3.New(c.cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func (c *_EtcdClient) putEtcdClient(x *clientv3.Client) {
+	c.clientPoolMutex.Lock()
+	defer c.clientPoolMutex.Unlock()
+
+	// close client
+	if len(c.clientPool) > 8 {
+		x.Close()
+		return
+	}
+
+	// cache client
+	c.clientPool = append(c.clientPool, x)
 }
 
 func (c *_EtcdClient) Type() string {
-	return BackendType
+	return Etcdv3BackendType
 }
 
 func (c *_EtcdClient) WatchEnabled() bool {
@@ -93,13 +154,17 @@ func (c *_EtcdClient) WatchEnabled() bool {
 
 // GetValues queries etcd for keys prefixed by prefix.
 func (c *_EtcdClient) GetValues(keys []string) (map[string]string, error) {
+	if c.hookKeyAdjuster != nil {
+		return c.getValues_hookKeyAdjuster(keys)
+	}
+
 	vars := make(map[string]string)
 
-	client, err := clientv3.New(c.cfg)
+	client, err := c.getEtcdClient()
 	if err != nil {
 		return vars, err
 	}
-	defer client.Close()
+	defer c.putEtcdClient(client)
 
 	for _, key := range keys {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(3)*time.Second)
@@ -115,8 +180,38 @@ func (c *_EtcdClient) GetValues(keys []string) (map[string]string, error) {
 	return vars, nil
 }
 
+func (c *_EtcdClient) getValues_hookKeyAdjuster(_keys []string) (map[string]string, error) {
+	var realKeysMap = map[string]string{}
+	for _, key := range _keys {
+		readKey := c.hookKeyAdjuster(key)
+		realKeysMap[readKey] = key
+	}
+
+	vars := make(map[string]string)
+
+	client, err := c.getEtcdClient()
+	if err != nil {
+		return vars, err
+	}
+	defer c.putEtcdClient(client)
+
+	for key := range realKeysMap {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(3)*time.Second)
+		resp, err := client.Get(ctx, key, clientv3.WithPrefix(), clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend))
+		cancel()
+		if err != nil {
+			return vars, err
+		}
+		for _, ev := range resp.Kvs {
+			vars[string(ev.Key)] = string(ev.Value)
+		}
+	}
+	return vars, nil
+}
+
 func (c *_EtcdClient) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	var err error
+	var logger = libconfd.GetLogger()
 
 	// return something > 0 to trigger a key retrieval from the store
 	if waitIndex == 0 {

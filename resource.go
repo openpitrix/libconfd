@@ -93,7 +93,7 @@ func ListTemplateResource(confdir string) ([]*TemplateResource, []string, error)
 		return nil, nil, fmt.Errorf("confdir '%s' does not exist", confdir)
 	}
 
-	globpaths, err := filepath.Glob(filepath.Join(confdir, "conf.d", "*.toml"))
+	globpaths, err := filepath.Glob(filepath.Join(confdir, "*.toml"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -148,7 +148,7 @@ func (p *TemplateResource) TomlString() string {
 
 	buf := new(bytes.Buffer)
 	if err := toml.NewEncoder(buf).Encode(q); err != nil {
-		logger.Panic(err)
+		GetLogger().Panic(err)
 	}
 	return buf.String()
 }

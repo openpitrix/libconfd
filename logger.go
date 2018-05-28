@@ -11,10 +11,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync/atomic"
 )
 
-var logger Logger = NewStdLogger(os.Stderr, "", "", 0)
+var pkgLogger atomic.Value
+
+func init() {
+	SetLogger(NewStdLogger(os.Stderr, "", "", 0))
+}
 
 // NewStdLogger create new logger based on std log.
 // If level is empty string, use WARN as the default level.
@@ -25,11 +30,14 @@ func NewStdLogger(out io.Writer, prefix, level string, flag int) Logger {
 }
 
 func GetLogger() Logger {
-	return logger
+	return pkgLogger.Load().(Logger)
 }
 
 func SetLogger(new Logger) (old Logger) {
-	old, logger = logger, new
+	if x := pkgLogger.Load(); x != nil {
+		old = x.(Logger)
+	}
+	pkgLogger.Store(new)
 	return
 }
 
@@ -81,8 +89,8 @@ func (level logLevelType) Valid() bool {
 }
 
 func newLogLevel(name string) logLevelType {
-	switch name {
-	case "DEBUG":
+	switch strings.ToUpper(name) {
+	case "DEBUG", "":
 		return logDebugLevel
 	case "INFO":
 		return logInfoLevel

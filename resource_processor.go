@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -40,15 +39,15 @@ func MakeAllTemplateResourceProcessor(
 	[]*TemplateResourceProcessor,
 	error,
 ) {
-	logger.Debug("Loading template resources from confdir " + config.ConfDir)
+	GetLogger().Debug("Loading template resources from confdir " + config.ConfDir)
 
 	tcs, paths, err := ListTemplateResource(config.GetConfigDir())
 	if err != nil {
 		if len(paths) == 0 {
-			logger.Warning("Found no templates")
+			GetLogger().Warning("Found no templates")
 			return nil, fmt.Errorf("Found no templates")
 		} else {
-			logger.Warning(err) // skip error
+			GetLogger().Warning(err) // skip error
 		}
 	}
 
@@ -66,7 +65,7 @@ func MakeAllTemplateResourceProcessor(
 func NewTemplateResourceProcessor(
 	path string, config *Config, client BackendClient, res *TemplateResource,
 ) *TemplateResourceProcessor {
-	logger.Debug("Loading template resource from " + path)
+	GetLogger().Debug("Loading template resource from " + path)
 
 	tr := TemplateResourceProcessor{
 		TemplateResource: *res,
@@ -78,6 +77,11 @@ func NewTemplateResourceProcessor(
 	tr.keepStageFile = config.KeepStageFile
 	tr.syncOnly = config.SyncOnly
 	tr.noop = config.Noop
+
+	// replace ${LIBCONFD_CONFDIR}
+	tr.Dest = strings.Replace(tr.Dest, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
+	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
+	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 
 	if config.ConfDir != "" {
 		if s := tr.Dest; !filepath.IsAbs(s) {
@@ -107,17 +111,12 @@ func NewTemplateResourceProcessor(
 		tr.Gid = os.Getegid()
 	}
 
-	tr.templateFunc = NewTemplateFunc(tr.store, tr.PGPPrivateKey)
+	tr.templateFunc = NewTemplateFunc(tr.store, tr.PGPPrivateKey, config.HookAbsKeyAdjuster)
 	tr.funcMap = tr.templateFunc.FuncMap
 
 	if !filepath.IsAbs(tr.Src) {
 		tr.Src = filepath.Join(config.GetTemplateDir(), tr.Src)
 	}
-
-	// replace ${LIBCONFD_CONFDIR}
-	tr.Dest = strings.Replace(tr.Dest, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
-	tr.CheckCmd = strings.Replace(tr.CheckCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
-	tr.ReloadCmd = strings.Replace(tr.ReloadCmd, `${LIBCONFD_CONFDIR}`, config.ConfDir, -1)
 
 	return &tr
 }
@@ -128,12 +127,8 @@ func NewTemplateResourceProcessor(
 // things up.
 // It returns an error if any.
 func (p *TemplateResourceProcessor) Process(call *Call) (err error) {
-	if fn := call.Config.HookOnError; fn != nil {
-		defer func() {
-			if err != nil {
-				fn(p.path, err)
-			}
-		}()
+	if fn := call.Config.HookOnUpdateDone; fn != nil {
+		defer func() { fn(p.path, err) }()
 	}
 
 	if len(call.Config.FuncMap) > 0 {
@@ -146,19 +141,19 @@ func (p *TemplateResourceProcessor) Process(call *Call) (err error) {
 	}
 
 	if err := p.setFileMode(call); err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 	if err := p.setVars(call); err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 	if err := p.createStageFile(call); err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 	if err := p.sync(call); err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 	return nil
@@ -184,10 +179,12 @@ func (p *TemplateResourceProcessor) setFileMode(call *Call) error {
 
 // setVars sets the Vars for template resource.
 func (p *TemplateResourceProcessor) setVars(call *Call) error {
-	logger.Debugln("prefix:", p.Prefix)
+	GetLogger().Debugln("prefix:", p.Prefix)
 
 	absKeys := p.getAbsKeys()
-	logger.Debugf("absKeys: %#v\n", absKeys)
+	GetLogger().Debugf("absKeys: %#v\n", absKeys)
+
+	GetLogger().Debugf("GetValues: absKeys0 = %#v\n", absKeys)
 
 	if fn := call.Config.HookAbsKeyAdjuster; fn != nil {
 		for i, key := range absKeys {
@@ -195,16 +192,19 @@ func (p *TemplateResourceProcessor) setVars(call *Call) error {
 		}
 	}
 
+	GetLogger().Debugf("GetValues: absKeys1 = %#v\n", absKeys)
+
 	values, err := p.client.GetValues(absKeys)
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("GetValues: %#v\n", values)
+	GetLogger().Debugf("GetValues: %#v\n", values)
 
 	p.store.Purge()
 	for k, v := range values {
-		p.store.Set(path.Join("/", strings.TrimPrefix(k, p.Prefix)), v)
+		//p.store.Set(path.Join("/", strings.TrimPrefix(k, p.Prefix)), v)
+		p.store.Set(k, v)
 	}
 
 	return nil
@@ -217,28 +217,28 @@ func (p *TemplateResourceProcessor) setVars(call *Call) error {
 func (p *TemplateResourceProcessor) createStageFile(call *Call) error {
 	if fileNotExists(p.Src) {
 		err := errors.New("Missing template: " + p.Src)
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 
 	tmpl, err := template.New(filepath.Base(p.Src)).Funcs(template.FuncMap(p.funcMap)).ParseFiles(p.Src)
 	if err != nil {
 		err := fmt.Errorf("Unable to process template %s, %s", p.Src, err)
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 
 	// create TempFile in Dest directory to avoid cross-filesystem issues
 	temp, err := ioutil.TempFile(filepath.Dir(p.Dest), "."+filepath.Base(p.Dest))
 	if err != nil {
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 
 	if err = tmpl.Execute(temp, nil); err != nil {
 		temp.Close()
 		os.Remove(temp.Name())
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 	defer temp.Close()
@@ -261,40 +261,40 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 	staged := p.stageFile.Name()
 
 	if p.keepStageFile {
-		logger.Info("Keeping staged file: " + staged)
+		GetLogger().Info("Keeping staged file: " + staged)
 	} else {
 		defer os.Remove(staged)
 	}
 
-	logger.Debug("Comparing candidate config to " + p.Dest)
+	GetLogger().Debug("Comparing candidate config to " + p.Dest)
 
 	isSame, err := p.checkSameConfig(staged, p.Dest)
 	if err != nil {
-		logger.Warning(err)
+		GetLogger().Warning(err)
 		return err
 	}
 
 	if p.noop {
-		logger.Warning("Noop mode enabled. " + p.Dest + " will not be modified")
+		GetLogger().Warning("Noop mode enabled. " + p.Dest + " will not be modified")
 		return nil
 	}
 	if isSame {
-		logger.Debug("Target config " + p.Dest + " in sync")
+		GetLogger().Debug("Target config " + p.Dest + " in sync")
 		return nil
 	}
 
-	logger.Info("Target config " + p.Dest + " out of sync")
+	GetLogger().Info("Target config " + p.Dest + " out of sync")
 	if !p.syncOnly && strings.TrimSpace(p.CheckCmd) != "" {
 		if err := p.doCheckCmd(call); err != nil {
 			return fmt.Errorf("Config check failed: %v", err)
 		}
 	}
 
-	logger.Debug("Overwriting target config " + p.Dest)
+	GetLogger().Debug("Overwriting target config " + p.Dest)
 
 	err = os.Rename(staged, p.Dest)
 	if err != nil {
-		logger.Debug("Rename failed - target is likely a mount. Trying to write instead")
+		GetLogger().Debug("Rename failed - target is likely a mount. Trying to write instead")
 
 		if !strings.Contains(err.Error(), "device or resource busy") {
 			return err
@@ -323,7 +323,7 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 		}
 	}
 
-	logger.Info("Target config " + p.Dest + " has been updated")
+	GetLogger().Info("Target config " + p.Dest + " has been updated")
 	return nil
 }
 
@@ -334,12 +334,8 @@ func (p *TemplateResourceProcessor) sync(call *Call) error {
 // file.
 // It returns nil if the check command returns 0 and there are no other errors.
 func (p *TemplateResourceProcessor) doCheckCmd(call *Call) (err error) {
-	if fn := call.Config.HookOnCheckCmdError; fn != nil {
-		defer func() {
-			if err != nil {
-				fn(p.path, p.CheckCmd, err)
-			}
-		}()
+	if fn := call.Config.HookOnCheckCmdDone; fn != nil {
+		defer func() { fn(p.path, p.CheckCmd, err) }()
 	}
 
 	var cmdBuffer bytes.Buffer
@@ -358,12 +354,8 @@ func (p *TemplateResourceProcessor) doCheckCmd(call *Call) (err error) {
 // reload executes the reload command.
 // It returns nil if the reload command returns 0.
 func (p *TemplateResourceProcessor) doReloadCmd(call *Call) (err error) {
-	if fn := call.Config.HookOnReloadCmdError; fn != nil {
-		defer func() {
-			if err != nil {
-				fn(p.path, p.ReloadCmd, err)
-			}
-		}()
+	if fn := call.Config.HookOnReloadCmdDone; fn != nil {
+		defer func() { fn(p.path, p.ReloadCmd, err) }()
 	}
 
 	return p.runCommand(p.ReloadCmd)
@@ -376,11 +368,11 @@ func (p *TemplateResourceProcessor) doReloadCmd(call *Call) (err error) {
 func (_ *TemplateResourceProcessor) runCommand(cmd string) error {
 	cmd = strings.TrimSpace(cmd)
 
-	logger.Debug("TemplateResourceProcessor.runCommand: " + cmd)
+	GetLogger().Debug("TemplateResourceProcessor.runCommand: " + cmd)
 
 	if _LIBCONFD_GOOS != runtime.GOOS {
 		err := fmt.Errorf("cross GOOS(%s) donot support runCommand!", _LIBCONFD_GOOS)
-		logger.Error(err)
+		GetLogger().Error(err)
 		return err
 	}
 
@@ -393,11 +385,11 @@ func (_ *TemplateResourceProcessor) runCommand(cmd string) error {
 
 	output, err := c.CombinedOutput()
 	if err != nil {
-		logger.Errorf("%q", string(output))
+		GetLogger().Errorf("%q", string(output))
 		return err
 	}
 
-	logger.Debugf("%q", string(output))
+	GetLogger().Debugf("%q", string(output))
 	return nil
 }
 

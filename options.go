@@ -68,20 +68,20 @@ func WithFuncMapUpdater(fn func(m template.FuncMap, basefn *TemplateFunc)) Optio
 	}
 }
 
-func WithHookOnCheckCmdError(fn func(trName, cmd string, err error)) Options {
+func WithHookOnCheckCmdDone(fn func(trName, cmd string, err error)) Options {
 	return func(opt *Config) {
-		opt.HookOnCheckCmdError = fn
+		opt.HookOnCheckCmdDone = fn
 	}
 }
 
-func WithHookOnReloadCmdError(fn func(trName, cmd string, err error)) Options {
+func WithHookOnReloadCmdDone(fn func(trName, cmd string, err error)) Options {
 	return func(opt *Config) {
-		opt.HookOnReloadCmdError = fn
+		opt.HookOnReloadCmdDone = fn
 	}
 }
 
-func WithHookOnError(fn func(trName string, err error)) Options {
+func WithHookOnUpdateDone(fn func(trName string, err error)) Options {
 	return func(opt *Config) {
-		opt.HookOnError = fn
+		opt.HookOnUpdateDone = fn
 	}
 }

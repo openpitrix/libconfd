@@ -26,9 +26,9 @@ func NewApplication(cfg *Config, client BackendClient) *Application {
 }
 
 func (p *Application) List(re string) {
-	_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+	_, paths, err := ListTemplateResource(p.cfg.GetConfigDir())
 	if err != nil {
-		logger.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 	for _, s := range paths {
 		basename := filepath.Base(s)
@@ -38,7 +38,7 @@ func (p *Application) List(re string) {
 		}
 		matched, err := regexp.MatchString(re, basename)
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 		if matched {
 			fmt.Println(basename)
@@ -48,9 +48,9 @@ func (p *Application) List(re string) {
 
 func (p *Application) Info(names ...string) {
 	if len(names) == 0 {
-		_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+		_, paths, err := ListTemplateResource(p.cfg.GetConfigDir())
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 		names = paths
 	}
@@ -60,7 +60,7 @@ func (p *Application) Info(names ...string) {
 		}
 		tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 		fmt.Println(tc.TomlString())
 	}
@@ -68,9 +68,9 @@ func (p *Application) Info(names ...string) {
 
 func (p *Application) Make(names ...string) {
 	if len(names) == 0 {
-		_, paths, err := ListTemplateResource(p.cfg.ConfDir)
+		_, paths, err := ListTemplateResource(p.cfg.GetConfigDir())
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 		names = paths
 	}
@@ -83,7 +83,7 @@ func (p *Application) Make(names ...string) {
 
 		tc, err := LoadTemplateResourceFile(p.cfg.ConfDir, name)
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 
 		tcp := NewTemplateResourceProcessor(name, p.cfg, p.client, tc)
@@ -93,7 +93,7 @@ func (p *Application) Make(names ...string) {
 
 		err = tcp.Process(&Call{Config: cfg, Client: p.client})
 		if err != nil {
-			logger.Fatal(err)
+			GetLogger().Fatal(err)
 		}
 
 		fmt.Println("done")
@@ -103,7 +103,7 @@ func (p *Application) Make(names ...string) {
 func (p *Application) GetValues(keys ...string) {
 	m, err := p.client.GetValues(keys)
 	if err != nil {
-		logger.Fatal(err)
+		GetLogger().Fatal(err)
 	}
 
 	var maxLen = 1
