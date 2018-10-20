@@ -2,14 +2,16 @@
 # Use of this source code is governed by a Apache license
 # that can be found in the LICENSE file.
 
+# +build !windows
+
 [template]
 src = "simple.json.tmpl"
 dest = "simple.json"
 
 check_cmd = """
-	mingw32-make -C ${LIBCONFD_CONFDIR}/apps/simple -f Makefile.windows check-config
+	make -C ${LIBCONFD_CONFDIR}/_apps/simple check-config
 """
 
 reload_cmd = """
-	mingw32-make -C ${LIBCONFD_CONFDIR}/apps/simple -f Makefile.windows restart
+	make -C ${LIBCONFD_CONFDIR}/_apps/simple restart
 """

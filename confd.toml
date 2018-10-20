@@ -7,7 +7,7 @@
 #
 # abspath = filepath.Join(ConfigPath, Config.ConfDir)
 #
-confdir = "./confd"
+confdir = "./testdata/confd"
 
 # The backend polling interval in seconds. (10)
 interval = 10
