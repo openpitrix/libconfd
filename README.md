@@ -33,4 +33,4 @@ func main() {
 $ go run miniconfd.go -h
 ```
 
-See [miniconfd.go](miniconfd.go)
+See [etcdv3/miniconfd-etcdv3/miniconfd.go](etcdv3/miniconfd-etcdv3/miniconfd.go)
