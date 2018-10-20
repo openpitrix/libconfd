@@ -2,8 +2,6 @@
 // Use of this source code is governed by a Apache license
 // that can be found in the LICENSE file.
 
-// +build ignore
-
 package main
 
 import (
@@ -14,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 
 	"openpitrix.io/openpitrix/pkg/libconfd"
-	_ "openpitrix.io/openpitrix/pkg/libconfd/backends"
+	_ "openpitrix.io/openpitrix/pkg/libconfd/etcdv3/backends"
 )
 
 func main() {
