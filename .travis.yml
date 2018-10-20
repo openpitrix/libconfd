@@ -1,28 +1,15 @@
-sudo: required
-
-services:
-  - docker
+# Copyright 2018 The OpenPitrix Authors. All rights reserved.
+# Use of this source code is governed by a Apache license
+# that can be found in the LICENSE file.
 
 language: go
 
 go:
-  - 1.9
-  - tip
+- '1.11'
+- 'tip'
 
 go_import_path: openpitrix.io/libconfd
 
-before_install:
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-  - sudo apt-get update
-  - sudo apt-get -y install docker-ce
-  - go get golang.org/x/crypto/...
-  - go get github.com/golang/glog
-  - go get github.com/BurntSushi/toml
-  - go get github.com/coreos/etcd/clientv3
-
-before_script:
-  - docker --version
-
 script:
-  - make test
+- env GO111MODULE=on go test ./...
+- env GO111MODULE=on go vet ./...
