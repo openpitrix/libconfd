@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 
 	"openpitrix.io/libconfd"
-	_ "openpitrix.io/libconfd/etcdv3/backends"
+	_ "openpitrix.io/libconfd/etcdv3/backend"
 )
 
 func main() {
