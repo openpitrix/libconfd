@@ -207,6 +207,7 @@ func (c *MetadClient) WatchPrefix(prefix string, keys []string, waitIndex uint64
 	done := make(chan struct{})
 	defer close(done)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?wait=true&prev_version=%d", conn.url, prefix, waitIndex), nil)
 	if err != nil {
 		return conn.waitIndex, err
